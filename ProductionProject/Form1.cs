@@ -183,12 +183,8 @@ namespace ProductionProject
             topPanel.Controls.Add(userLabel);
             topPanel.Controls.Add(btnExit);
 
-            TabControl tabs = new TabControl
-            {
-                Dock = DockStyle.Fill,
-                Appearance = TabAppearance.Normal,
-                SizeMode = TabSizeMode.Normal
-            };
+            TabControl tabs = new TabControl { Dock = DockStyle.Fill, Appearance = TabAppearance.Normal, SizeMode = TabSizeMode.Normal };
+            bool canEdit = currentUser.Role == "Администратор";
 
             tabs.TabPages.Add(CreateHomeTab());
             tabs.TabPages.Add(CreateTableTab("Заказы", @"
@@ -203,9 +199,9 @@ namespace ProductionProject
                 JOIN Counterparties c ON co.customer_id = c.id
                 JOIN Products p ON coi.product_id = p.id"));
 
-            tabs.TabPages.Add(CreateTableTab("Продукция", "SELECT code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM Products"));
-            tabs.TabPages.Add(CreateTableTab("Материалы", "SELECT code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM Materials"));
-            tabs.TabPages.Add(CreateTableTab("Операции", "SELECT code AS [Артикул], name AS [Наименование], price AS [Цена] FROM Operations"));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEdit));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEdit));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
 
             tabs.TabPages.Add(CreateTableTab("Спецификации", @"
                 SELECT p.name AS [Продукция],
@@ -225,7 +221,7 @@ namespace ProductionProject
 
             tabs.TabPages.Add(CreateCostTab());
 
-            if (currentUser.Role == "Администратор")
+            if (canEdit)
                 tabs.TabPages.Add(CreateUsersTab());
 
             Controls.Add(tabs);
@@ -241,8 +237,8 @@ namespace ProductionProject
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 12, FontStyle.Regular),
                 Text = currentUser.Role == "Администратор"
-                    ? "Вы вошли как администратор. Доступны просмотр данных и управление пользователями."
-                    : "Вы вошли как пользователь. Доступен просмотр производственных данных."
+                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников."
+                    : "Вы вошли как пользователь. Доступен только просмотр производственных данных."
             };
             page.Controls.Add(label);
             return page;
