@@ -38,11 +38,11 @@ namespace ProductionProject
             MinimizeBox = false;
 
             Controls.Add(new Label { Text = "Заказ:", Location = new Point(30, 35), AutoSize = true });
-            cmbOrder = new ComboBox { Location = new Point(140, 32), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList, DisplayMember = "display_name", ValueMember = "id" };
+            cmbOrder = new ComboBox { Location = new Point(140, 32), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList };
             Controls.Add(cmbOrder);
 
             Controls.Add(new Label { Text = "Продукция:", Location = new Point(30, 78), AutoSize = true });
-            cmbProduct = new ComboBox { Location = new Point(140, 75), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList, DisplayMember = "name", ValueMember = "id" };
+            cmbProduct = new ComboBox { Location = new Point(140, 75), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList };
             Controls.Add(cmbProduct);
 
             Controls.Add(new Label { Text = "Количество:", Location = new Point(30, 121), AutoSize = true });
@@ -68,6 +68,8 @@ namespace ProductionProject
             {
                 DataTable table = new DataTable();
                 adapter.Fill(table);
+                cmbOrder.DisplayMember = "display_name";
+                cmbOrder.ValueMember = "id";
                 cmbOrder.DataSource = table;
                 if (OrderId > 0) cmbOrder.SelectedValue = OrderId;
             }
@@ -80,9 +82,18 @@ namespace ProductionProject
             {
                 DataTable table = new DataTable();
                 adapter.Fill(table);
+                cmbProduct.DisplayMember = "name";
+                cmbProduct.ValueMember = "id";
                 cmbProduct.DataSource = table;
                 if (ProductId > 0) cmbProduct.SelectedValue = ProductId;
             }
+        }
+
+        private int GetComboId(ComboBox combo)
+        {
+            if (combo.SelectedValue is DataRowView row)
+                return Convert.ToInt32(row["id"]);
+            return Convert.ToInt32(combo.SelectedValue);
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
@@ -93,8 +104,8 @@ namespace ProductionProject
                 return;
             }
 
-            OrderId = Convert.ToInt32(cmbOrder.SelectedValue);
-            ProductId = Convert.ToInt32(cmbProduct.SelectedValue);
+            OrderId = GetComboId(cmbOrder);
+            ProductId = GetComboId(cmbProduct);
             Quantity = nudQuantity.Value;
             DialogResult = DialogResult.OK;
             Close();
