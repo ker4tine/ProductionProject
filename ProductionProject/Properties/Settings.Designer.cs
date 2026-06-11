@@ -33,5 +33,16 @@ namespace ProductionProject.Properties {
                 return ((string)(this["ProductionDBConnectionString"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
+        [global::System.Configuration.DefaultSettingValueAttribute("Data Source=WIN-BBJB9MMFFR1\\SQLEXPRESS;Initial Catalog=PracticeDB;Integrated Secu" +
+            "rity=True;TrustServerCertificate=True")]
+        public string PracticeDBConnectionString {
+            get {
+                return ((string)(this["PracticeDBConnectionString"]));
+            }
+        }
     }
 }

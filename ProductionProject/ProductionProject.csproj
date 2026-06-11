@@ -46,6 +46,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PracticeDBDataSet.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
+    </Compile>
     <Compile Include="ProductionDBDataSet.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -62,6 +67,17 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="PracticeDBDataSet.xsc">
+      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
+    </None>
+    <None Include="PracticeDBDataSet.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>PracticeDBDataSet.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="PracticeDBDataSet.xss">
+      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
+    </None>
     <None Include="ProductionDBDataSet.xsc">
       <DependentUpon>ProductionDBDataSet.xsd</DependentUpon>
     </None>
