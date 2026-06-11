@@ -9,6 +9,8 @@
     <Compile Include="CaptchaForm.cs" />
     <Compile Include="CrudHelper.cs" />
     <Compile Include="DictionaryEditForm.cs" />
+    <Compile Include="NoteCrudHelper.cs" />
+    <Compile Include="NoteEditForm.cs" />
     <Compile Include="OrderCrudHelper.cs" />
     <Compile Include="OrderEditForm.cs" />
     <Compile Include="OrderItemEditForm.cs" />
