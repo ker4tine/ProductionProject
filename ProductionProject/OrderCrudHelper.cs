@@ -164,7 +164,7 @@ namespace ProductionProject
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
-            int customerId = GetCustomerId(connectionString, id);
+            object customerId = GetCustomerId(connectionString, id);
             DateTime orderDate = Convert.ToDateTime(grid.CurrentRow.Cells["Дата заказа"].Value);
 
             using (OrderEditForm form = new OrderEditForm(connectionString, "Изменение заказа", customerId, orderDate))
@@ -183,14 +183,14 @@ namespace ProductionProject
             }
         }
 
-        private static int GetCustomerId(string connectionString, int orderId)
+        private static object GetCustomerId(string connectionString, int orderId)
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlCommand command = new SqlCommand("SELECT customer_id FROM CustomerOrders WHERE id = @id", connection))
             {
                 command.Parameters.AddWithValue("@id", orderId);
                 connection.Open();
-                return Convert.ToInt32(command.ExecuteScalar());
+                return command.ExecuteScalar();
             }
         }
 
