@@ -12,16 +12,18 @@ namespace ProductionProject
         private TextBox txtPrice;
         private readonly bool hasUnit;
         private readonly bool hasPrice;
+        private readonly bool codeReadOnly;
 
         public string ItemCode { get; private set; }
         public string ItemName { get; private set; }
         public string ItemUnit { get; private set; }
         public decimal ItemPrice { get; private set; }
 
-        public DictionaryEditForm(string title, bool hasUnit, bool hasPrice, string code = "", string name = "", string unit = "", decimal price = 0)
+        public DictionaryEditForm(string title, bool hasUnit, bool hasPrice, string code = "", string name = "", string unit = "", decimal price = 0, bool codeReadOnly = false)
         {
             this.hasUnit = hasUnit;
             this.hasPrice = hasPrice;
+            this.codeReadOnly = codeReadOnly;
             ItemCode = code;
             ItemName = name;
             ItemUnit = unit;
@@ -39,9 +41,8 @@ namespace ProductionProject
             MinimizeBox = false;
 
             int y = 25;
-
             Controls.Add(new Label { Text = "Артикул:", Location = new Point(30, y + 3), AutoSize = true });
-            txtCode = new TextBox { Location = new Point(150, y), Width = 170, Text = ItemCode };
+            txtCode = new TextBox { Location = new Point(150, y), Width = 170, Text = ItemCode, ReadOnly = codeReadOnly };
             Controls.Add(txtCode);
             y += 38;
 
@@ -68,9 +69,7 @@ namespace ProductionProject
 
             Button btnOk = new Button { Text = "Сохранить", Location = new Point(80, y + 15), Width = 100 };
             btnOk.Click += BtnOk_Click;
-
             Button btnCancel = new Button { Text = "Отмена", Location = new Point(195, y + 15), Width = 100, DialogResult = DialogResult.Cancel };
-
             Controls.Add(btnOk);
             Controls.Add(btnCancel);
         }
@@ -94,7 +93,6 @@ namespace ProductionProject
             ItemName = txtName.Text.Trim();
             ItemUnit = hasUnit ? txtUnit.Text.Trim() : "";
             ItemPrice = price;
-
             DialogResult = DialogResult.OK;
             Close();
         }
