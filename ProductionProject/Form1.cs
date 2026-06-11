@@ -187,18 +187,8 @@ namespace ProductionProject
             bool canEdit = currentUser.Role == "Администратор";
 
             tabs.TabPages.Add(CreateHomeTab());
-            tabs.TabPages.Add(CreateTableTab("Заказы", @"
-                SELECT c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
-                FROM CustomerOrders co
-                JOIN Counterparties c ON co.customer_id = c.id"));
-
-            tabs.TabPages.Add(CreateTableTab("Позиции заказов", @"
-                SELECT c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество], p.unit AS [Ед. изм.]
-                FROM CustomerOrderItems coi
-                JOIN CustomerOrders co ON coi.order_id = co.id
-                JOIN Counterparties c ON co.customer_id = c.id
-                JOIN Products p ON coi.product_id = p.id"));
-
+            tabs.TabPages.Add(OrderCrudHelper.CreateOrdersTab(connectionString, canEdit));
+            tabs.TabPages.Add(OrderCrudHelper.CreateOrderItemsTab(connectionString, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
@@ -237,7 +227,7 @@ namespace ProductionProject
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 12, FontStyle.Regular),
                 Text = currentUser.Role == "Администратор"
-                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников."
+                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников/заказов."
                     : "Вы вошли как пользователь. Доступен только просмотр производственных данных."
             };
             page.Controls.Add(label);
