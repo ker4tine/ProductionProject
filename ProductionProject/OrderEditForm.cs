@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Windows.Forms;
@@ -72,7 +71,8 @@ namespace ProductionProject
 
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (!(cmbCustomer.SelectedItem is ComboItem customer))
+            ComboItem customer = cmbCustomer.SelectedItem as ComboItem;
+            if (customer == null)
             {
                 MessageBox.Show("Выберите заказчика.");
                 return;
