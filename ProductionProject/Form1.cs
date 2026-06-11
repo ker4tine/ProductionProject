@@ -141,25 +141,25 @@ namespace ProductionProject
             };
 
             TabControl tabs = new TabControl { Dock = DockStyle.Fill };
-            tabs.TabPages.Add(CreateTableTab("Заказы", "SELECT * FROM CustomerOrders", "CustomerOrders"));
-            tabs.TabPages.Add(CreateTableTab("Позиции заказов", "SELECT * FROM CustomerOrderItems", "CustomerOrderItems"));
-            tabs.TabPages.Add(CreateTableTab("Продукция", "SELECT * FROM Products", "Products"));
-            tabs.TabPages.Add(CreateTableTab("Материалы", "SELECT * FROM Materials", "Materials"));
-            tabs.TabPages.Add(CreateTableTab("Операции", "SELECT * FROM Operations", "Operations"));
-            tabs.TabPages.Add(CreateTableTab("Спецификации", "SELECT * FROM Specifications", "Specifications"));
-            tabs.TabPages.Add(CreateTableTab("Заметки", "SELECT n.id, n.title + N' - ' + u.login AS title_user, n.content, FORMAT(n.created_at, 'dd.MM.yyyy') AS formatted_date FROM Notes n JOIN Users u ON n.user_id = u.id", "Notes"));
+            tabs.TabPages.Add(CreateTableTab("Заказы", "SELECT id AS [Номер заказа], customer_id AS [Код заказчика], order_date AS [Дата заказа] FROM CustomerOrders"));
+            tabs.TabPages.Add(CreateTableTab("Позиции заказов", "SELECT id AS [Номер позиции], order_id AS [Номер заказа], product_id AS [Код продукции], quantity AS [Количество] FROM CustomerOrderItems"));
+            tabs.TabPages.Add(CreateTableTab("Продукция", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM Products"));
+            tabs.TabPages.Add(CreateTableTab("Материалы", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM Materials"));
+            tabs.TabPages.Add(CreateTableTab("Операции", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], price AS [Цена] FROM Operations"));
+            tabs.TabPages.Add(CreateTableTab("Спецификации", "SELECT id AS [Код], product_id AS [Код продукции], material_id AS [Код материала], operation_id AS [Код операции], material_qty AS [Количество материала], operation_qty AS [Количество операции] FROM Specifications"));
+            tabs.TabPages.Add(CreateTableTab("Заметки", "SELECT n.id AS [Код], n.title + N' - ' + u.login AS [Заголовок и пользователь], n.content AS [Содержание], FORMAT(n.created_at, 'dd.MM.yyyy') AS [Дата] FROM Notes n JOIN Users u ON n.user_id = u.id"));
             tabs.TabPages.Add(CreateCostTab());
 
             if (currentRole == "Администратор")
             {
-                tabs.TabPages.Add(CreateTableTab("Пользователи", "SELECT u.id, u.login, u.full_name, r.name AS role_name, u.is_blocked, u.failed_attempts FROM Users u JOIN Roles r ON u.role_id = r.id", "Users"));
+                tabs.TabPages.Add(CreateTableTab("Пользователи", "SELECT u.id AS [Код], u.login AS [Логин], u.full_name AS [ФИО], r.name AS [Роль], CASE WHEN u.is_blocked = 1 THEN N'Да' ELSE N'Нет' END AS [Заблокирован], u.failed_attempts AS [Ошибок входа] FROM Users u JOIN Roles r ON u.role_id = r.id"));
             }
 
             Controls.Add(tabs);
             Controls.Add(lblUser);
         }
 
-        private TabPage CreateTableTab(string title, string query, string tableName)
+        private TabPage CreateTableTab(string title, string query)
         {
             TabPage page = new TabPage(title);
             DataGridView grid = new DataGridView
@@ -188,13 +188,13 @@ namespace ProductionProject
         {
             string query = @"
                 SELECT 
-                    co.id AS order_id,
+                    co.id AS [Номер заказа],
                     SUM(
                         coi.quantity * (
                             ISNULL(s.material_qty, 0) * ISNULL(m.price, 0) +
                             ISNULL(s.operation_qty, 0) * ISNULL(o.price, 0)
                         )
-                    ) AS total_price
+                    ) AS [Полная стоимость]
                 FROM CustomerOrders co
                 JOIN CustomerOrderItems coi ON co.id = coi.order_id
                 JOIN Specifications s ON coi.product_id = s.product_id
@@ -202,7 +202,7 @@ namespace ProductionProject
                 LEFT JOIN Operations o ON s.operation_id = o.id
                 GROUP BY co.id";
 
-            return CreateTableTab("Расчет стоимости", query, "Cost");
+            return CreateTableTab("Расчет стоимости", query);
         }
 
         private void LoadGrid(DataGridView grid, string query)
