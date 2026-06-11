@@ -23,6 +23,7 @@ namespace ProductionProject
                 LEFT JOIN Operations o ON s.operation_id = o.id";
 
             TabPage page = new TabPage("Спецификации");
+            Panel contentPanel = new Panel { Dock = DockStyle.Fill };
             DataGridView grid = CreateGrid();
             FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
 
@@ -39,9 +40,9 @@ namespace ProductionProject
                 panel.Controls.Add(btnDelete);
             }
 
-            page.Controls.Add(grid);
-            page.Controls.Add(panel);
-            panel.BringToFront();
+            contentPanel.Controls.Add(grid);
+            contentPanel.Controls.Add(panel);
+            page.Controls.Add(contentPanel);
             LoadGrid(connectionString, grid, query);
             return page;
         }
