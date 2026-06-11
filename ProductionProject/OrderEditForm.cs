@@ -51,33 +51,54 @@ namespace ProductionProject
         private void LoadCustomers()
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT id, name FROM Counterparties ORDER BY name", connection))
+            using (SqlCommand command = new SqlCommand("SELECT id, name FROM Counterparties ORDER BY name", connection))
             {
-                DataTable table = new DataTable();
-                adapter.Fill(table);
-                cmbCustomer.DisplayMember = "name";
-                cmbCustomer.ValueMember = "id";
-                cmbCustomer.DataSource = table;
-                if (CustomerId > 0) cmbCustomer.SelectedValue = CustomerId;
+                connection.Open();
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ComboItem item = new ComboItem(Convert.ToInt32(reader["id"]), reader["name"].ToString());
+                        cmbCustomer.Items.Add(item);
+                        if (CustomerId > 0 && item.Id == CustomerId)
+                            cmbCustomer.SelectedItem = item;
+                    }
+                }
             }
+
+            if (cmbCustomer.SelectedIndex < 0 && cmbCustomer.Items.Count > 0)
+                cmbCustomer.SelectedIndex = 0;
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (cmbCustomer.SelectedValue == null)
+            if (!(cmbCustomer.SelectedItem is ComboItem customer))
             {
                 MessageBox.Show("Выберите заказчика.");
                 return;
             }
 
-            if (cmbCustomer.SelectedValue is DataRowView row)
-                CustomerId = Convert.ToInt32(row["id"]);
-            else
-                CustomerId = Convert.ToInt32(cmbCustomer.SelectedValue);
-
+            CustomerId = customer.Id;
             OrderDate = dtpOrderDate.Value.Date;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private class ComboItem
+        {
+            public int Id { get; private set; }
+            public string Name { get; private set; }
+
+            public ComboItem(int id, string name)
+            {
+                Id = id;
+                Name = name;
+            }
+
+            public override string ToString()
+            {
+                return Name;
+            }
         }
     }
 }
