@@ -188,12 +188,12 @@ namespace ProductionProject
 
             tabs.TabPages.Add(CreateHomeTab());
             tabs.TabPages.Add(CreateTableTab("Заказы", @"
-                SELECT co.id AS [Номер заказа], c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
+                SELECT c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
                 FROM CustomerOrders co
                 JOIN Counterparties c ON co.customer_id = c.id"));
 
             tabs.TabPages.Add(CreateTableTab("Позиции заказов", @"
-                SELECT coi.id AS [Номер позиции], co.id AS [Номер заказа], c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество], p.unit AS [Ед. изм.]
+                SELECT c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество], p.unit AS [Ед. изм.]
                 FROM CustomerOrderItems coi
                 JOIN CustomerOrders co ON coi.order_id = co.id
                 JOIN Counterparties c ON co.customer_id = c.id
@@ -256,7 +256,7 @@ namespace ProductionProject
             Button btnUnblock = new Button { Text = "Разблокировать", Width = 130 };
             Button btnReset = new Button { Text = "Сбросить ошибки", Width = 130 };
 
-            string query = "SELECT u.id AS [Код], u.login AS [Логин], u.full_name AS [ФИО], r.name AS [Роль], CASE WHEN u.is_blocked = 1 THEN N'Да' ELSE N'Нет' END AS [Заблокирован], u.failed_attempts AS [Ошибок входа] FROM Users u JOIN Roles r ON u.role_id = r.id";
+            string query = "SELECT u.id AS [ID], u.login AS [Логин], u.full_name AS [ФИО], r.name AS [Роль], CASE WHEN u.is_blocked = 1 THEN N'Да' ELSE N'Нет' END AS [Заблокирован], u.failed_attempts AS [Ошибок входа] FROM Users u JOIN Roles r ON u.role_id = r.id";
             btnRefresh.Click += (s, e) => LoadGrid(grid, query);
             btnAdd.Click += (s, e) => AddUser(grid, query);
             btnBlock.Click += (s, e) => SetSelectedUserBlocked(grid, true, query);
@@ -296,7 +296,7 @@ namespace ProductionProject
         private int GetSelectedUserId(DataGridView grid)
         {
             if (grid.CurrentRow == null) return 0;
-            return Convert.ToInt32(grid.CurrentRow.Cells["Код"].Value);
+            return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
         private void SetSelectedUserBlocked(DataGridView grid, bool blocked, string query)
@@ -360,7 +360,7 @@ namespace ProductionProject
         private TabPage CreateCostTab()
         {
             string query = @"
-                SELECT co.id AS [Номер заказа], c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество],
+                SELECT c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество],
                        SUM(coi.quantity * (ISNULL(s.material_qty, 0) * ISNULL(m.price, 0) + ISNULL(s.operation_qty, 0) * ISNULL(o.price, 0))) AS [Полная стоимость]
                 FROM CustomerOrders co
                 JOIN Counterparties c ON co.customer_id = c.id
@@ -369,7 +369,7 @@ namespace ProductionProject
                 JOIN Specifications s ON coi.product_id = s.product_id
                 LEFT JOIN Materials m ON s.material_id = m.id
                 LEFT JOIN Operations o ON s.operation_id = o.id
-                GROUP BY co.id, c.name, p.name, coi.quantity";
+                GROUP BY c.name, p.name, coi.quantity";
             return CreateTableTab("Расчет стоимости", query);
         }
 
@@ -383,6 +383,8 @@ namespace ProductionProject
                     DataTable table = new DataTable();
                     adapter.Fill(table);
                     grid.DataSource = table;
+                    if (grid.Columns.Contains("ID"))
+                        grid.Columns["ID"].Visible = false;
                 }
             }
             catch (Exception ex)
