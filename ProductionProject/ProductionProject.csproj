@@ -12,6 +12,8 @@
     <Compile Include="OrderCrudHelper.cs" />
     <Compile Include="OrderEditForm.cs" />
     <Compile Include="OrderItemEditForm.cs" />
+    <Compile Include="SpecificationCrudHelper.cs" />
+    <Compile Include="SpecificationEditForm.cs" />
     <Compile Include="UserEditForm.cs" />
     <Compile Include="Form1.cs"><SubType>Form</SubType></Compile>
     <Compile Include="Form1.Designer.cs"><DependentUpon>Form1.cs</DependentUpon></Compile>
