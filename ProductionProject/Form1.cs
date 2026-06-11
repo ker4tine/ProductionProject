@@ -16,9 +16,14 @@ namespace ProductionProject
         private Label lblMessage;
 
         private int failedAttempts = 0;
-        private int currentUserId;
-        private string currentLogin;
-        private string currentRole;
+        private currentUserData currentUser;
+
+        private class currentUserData
+        {
+            public int Id;
+            public string Login;
+            public string Role;
+        }
 
         public Form1()
         {
@@ -31,25 +36,21 @@ namespace ProductionProject
             Controls.Clear();
             Text = "Авторизация";
             StartPosition = FormStartPosition.CenterScreen;
-            Size = new Size(360, 260);
+            Size = new Size(380, 270);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
 
-            Label lblTitle = new Label { Text = "Вход в систему", Font = new Font("Segoe UI", 14, FontStyle.Bold), AutoSize = true, Location = new Point(105, 20) };
-            Label lblLogin = new Label { Text = "Логин:", Location = new Point(40, 70), AutoSize = true };
-            txtLogin = new TextBox { Location = new Point(130, 67), Width = 160 };
-            Label lblPassword = new Label { Text = "Пароль:", Location = new Point(40, 105), AutoSize = true };
-            txtPassword = new TextBox { Location = new Point(130, 102), Width = 160, UseSystemPasswordChar = true };
-            btnLogin = new Button { Text = "Войти", Location = new Point(130, 140), Width = 100 };
-            btnLogin.Click += BtnLogin_Click;
-            lblMessage = new Label { Text = "", ForeColor = Color.Red, Location = new Point(40, 180), Size = new Size(270, 40) };
-
-            Controls.Add(lblTitle);
-            Controls.Add(lblLogin);
+            Controls.Add(new Label { Text = "Вход в систему", Font = new Font("Segoe UI", 14, FontStyle.Bold), AutoSize = true, Location = new Point(115, 20) });
+            Controls.Add(new Label { Text = "Логин:", Location = new Point(40, 70), AutoSize = true });
+            txtLogin = new TextBox { Location = new Point(140, 67), Width = 170 };
             Controls.Add(txtLogin);
-            Controls.Add(lblPassword);
+            Controls.Add(new Label { Text = "Пароль:", Location = new Point(40, 105), AutoSize = true });
+            txtPassword = new TextBox { Location = new Point(140, 102), Width = 170, UseSystemPasswordChar = true };
             Controls.Add(txtPassword);
+            btnLogin = new Button { Text = "Войти", Location = new Point(140, 140), Width = 100 };
+            btnLogin.Click += BtnLogin_Click;
             Controls.Add(btnLogin);
+            lblMessage = new Label { ForeColor = Color.Red, Location = new Point(40, 180), Size = new Size(300, 50) };
             Controls.Add(lblMessage);
         }
 
@@ -73,7 +74,6 @@ namespace ProductionProject
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 connection.Open();
-
                 int? userIdByLogin = GetUserIdByLogin(connection, login);
 
                 string sql = @"
@@ -95,13 +95,15 @@ namespace ProductionProject
                             failedAttempts++;
 
                             if (userIdByLogin.HasValue)
-                            {
                                 IncreaseFailedAttempts(connection, userIdByLogin.Value);
-                            }
 
-                            lblMessage.Text = failedAttempts >= 3
-                                ? "Пользователь заблокирован после 3 ошибок. Обратитесь к администратору."
-                                : "Неверный логин или пароль.";
+                            if (failedAttempts == 1)
+                                lblMessage.Text = "Неверный логин или пароль. Осталось 2 попытки.";
+                            else if (failedAttempts == 2)
+                                lblMessage.Text = "Неверный логин или пароль. При следующей попытке появится капча.";
+                            else
+                                lblMessage.Text = "Пользователь заблокирован после 3 ошибок. Обратитесь к администратору.";
+
                             return;
                         }
 
@@ -111,13 +113,16 @@ namespace ProductionProject
                             return;
                         }
 
-                        currentUserId = Convert.ToInt32(reader["id"]);
-                        currentLogin = reader["login"].ToString();
-                        currentRole = reader["role_name"].ToString();
+                        currentUser = new currentUserData
+                        {
+                            Id = Convert.ToInt32(reader["id"]),
+                            Login = reader["login"].ToString(),
+                            Role = reader["role_name"].ToString()
+                        };
                     }
                 }
 
-                ResetFailedAttempts(connection, currentUserId);
+                ResetFailedAttempts(connection, currentUser.Id);
             }
 
             BuildMainForm();
@@ -129,8 +134,7 @@ namespace ProductionProject
             {
                 command.Parameters.AddWithValue("@login", login);
                 object result = command.ExecuteScalar();
-                if (result == null) return null;
-                return Convert.ToInt32(result);
+                return result == null ? (int?)null : Convert.ToInt32(result);
             }
         }
 
@@ -141,7 +145,6 @@ namespace ProductionProject
                 SET failed_attempts = failed_attempts + 1,
                     is_blocked = CASE WHEN failed_attempts + 1 >= 3 THEN 1 ELSE is_blocked END
                 WHERE id = @id";
-
             using (SqlCommand command = new SqlCommand(sql, connection))
             {
                 command.Parameters.AddWithValue("@id", userId);
@@ -162,29 +165,52 @@ namespace ProductionProject
         {
             Controls.Clear();
             Text = "Производственный учет";
-            Size = new Size(1000, 650);
+            Size = new Size(1100, 650);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = true;
 
-            Label lblUser = new Label { Text = "Пользователь: " + currentLogin + " | Роль: " + currentRole, Dock = DockStyle.Top, Height = 30, TextAlign = ContentAlignment.MiddleLeft };
+            Controls.Add(new Label { Text = "Пользователь: " + currentUser.Login + " | Роль: " + currentUser.Role, Dock = DockStyle.Top, Height = 30, TextAlign = ContentAlignment.MiddleLeft });
+
             TabControl tabs = new TabControl { Dock = DockStyle.Fill };
-            tabs.TabPages.Add(CreateTableTab("Заказы", "SELECT id AS [Номер заказа], customer_id AS [Код заказчика], order_date AS [Дата заказа] FROM CustomerOrders"));
-            tabs.TabPages.Add(CreateTableTab("Позиции заказов", "SELECT id AS [Номер позиции], order_id AS [Номер заказа], product_id AS [Код продукции], quantity AS [Количество] FROM CustomerOrderItems"));
-            tabs.TabPages.Add(CreateTableTab("Продукция", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM Products"));
-            tabs.TabPages.Add(CreateTableTab("Материалы", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM Materials"));
-            tabs.TabPages.Add(CreateTableTab("Операции", "SELECT id AS [Код], code AS [Артикул], name AS [Наименование], price AS [Цена] FROM Operations"));
-            tabs.TabPages.Add(CreateTableTab("Спецификации", "SELECT id AS [Код], product_id AS [Код продукции], material_id AS [Код материала], operation_id AS [Код операции], material_qty AS [Количество материала], operation_qty AS [Количество операции] FROM Specifications"));
-            tabs.TabPages.Add(CreateTableTab("Заметки", "SELECT n.id AS [Код], n.title + N' - ' + u.login AS [Заголовок и пользователь], n.content AS [Содержание], FORMAT(n.created_at, 'dd.MM.yyyy') AS [Дата] FROM Notes n JOIN Users u ON n.user_id = u.id"));
+            tabs.TabPages.Add(CreateTableTab("Заказы", @"
+                SELECT co.id AS [Номер заказа], c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
+                FROM CustomerOrders co
+                JOIN Counterparties c ON co.customer_id = c.id"));
+
+            tabs.TabPages.Add(CreateTableTab("Позиции заказов", @"
+                SELECT coi.id AS [Номер позиции], co.id AS [Номер заказа], c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество], p.unit AS [Ед. изм.]
+                FROM CustomerOrderItems coi
+                JOIN CustomerOrders co ON coi.order_id = co.id
+                JOIN Counterparties c ON co.customer_id = c.id
+                JOIN Products p ON coi.product_id = p.id"));
+
+            tabs.TabPages.Add(CreateTableTab("Продукция", "SELECT code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM Products"));
+            tabs.TabPages.Add(CreateTableTab("Материалы", "SELECT code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM Materials"));
+            tabs.TabPages.Add(CreateTableTab("Операции", "SELECT code AS [Артикул], name AS [Наименование], price AS [Цена] FROM Operations"));
+
+            tabs.TabPages.Add(CreateTableTab("Спецификации", @"
+                SELECT p.name AS [Продукция],
+                       ISNULL(m.name, o.name) AS [Материал или операция],
+                       CASE WHEN m.id IS NOT NULL THEN N'Материал' ELSE N'Операция' END AS [Тип],
+                       CASE WHEN m.id IS NOT NULL THEN s.material_qty ELSE s.operation_qty END AS [Количество],
+                       ISNULL(m.unit, N'операция') AS [Ед. изм.],
+                       ISNULL(m.price, o.price) AS [Цена]
+                FROM Specifications s
+                JOIN Products p ON s.product_id = p.id
+                LEFT JOIN Materials m ON s.material_id = m.id
+                LEFT JOIN Operations o ON s.operation_id = o.id"));
+
+            tabs.TabPages.Add(CreateTableTab("Заметки", @"
+                SELECT n.title AS [Заголовок], u.login AS [Пользователь], n.content AS [Содержание], FORMAT(n.created_at, 'dd.MM.yyyy') AS [Дата]
+                FROM Notes n JOIN Users u ON n.user_id = u.id"));
+
             tabs.TabPages.Add(CreateCostTab());
 
-            if (currentRole == "Администратор")
-            {
+            if (currentUser.Role == "Администратор")
                 tabs.TabPages.Add(CreateUsersTab());
-            }
 
             Controls.Add(tabs);
-            Controls.Add(lblUser);
         }
 
         private TabPage CreateUsersTab()
@@ -222,7 +248,6 @@ namespace ProductionProject
             using (UserEditForm form = new UserEditForm())
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
-
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 using (SqlCommand command = new SqlCommand("INSERT INTO Users (login, password_hash, full_name, role_id) VALUES (@login, @password, @name, @role)", connection))
                 {
@@ -233,7 +258,6 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-
                 LoadGrid(grid, query);
             }
         }
@@ -248,7 +272,6 @@ namespace ProductionProject
         {
             int id = GetSelectedUserId(grid);
             if (id == 0) return;
-
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlCommand command = new SqlCommand("UPDATE Users SET is_blocked = @blocked WHERE id = @id", connection))
             {
@@ -257,7 +280,6 @@ namespace ProductionProject
                 connection.Open();
                 command.ExecuteNonQuery();
             }
-
             LoadGrid(grid, query);
         }
 
@@ -265,7 +287,6 @@ namespace ProductionProject
         {
             int id = GetSelectedUserId(grid);
             if (id == 0) return;
-
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlCommand command = new SqlCommand("UPDATE Users SET failed_attempts = 0, is_blocked = 0 WHERE id = @id", connection))
             {
@@ -273,14 +294,13 @@ namespace ProductionProject
                 connection.Open();
                 command.ExecuteNonQuery();
             }
-
             LoadGrid(grid, query);
         }
 
         private TabPage CreateTableTab(string title, string query)
         {
             TabPage page = new TabPage(title);
-            DataGridView grid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
+            DataGridView grid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false, RowHeadersVisible = false };
             Button refreshButton = new Button { Text = "Обновить", Dock = DockStyle.Top, Height = 32 };
             refreshButton.Click += (s, e) => LoadGrid(grid, query);
             page.Controls.Add(grid);
@@ -292,14 +312,16 @@ namespace ProductionProject
         private TabPage CreateCostTab()
         {
             string query = @"
-                SELECT co.id AS [Номер заказа],
+                SELECT co.id AS [Номер заказа], c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество],
                        SUM(coi.quantity * (ISNULL(s.material_qty, 0) * ISNULL(m.price, 0) + ISNULL(s.operation_qty, 0) * ISNULL(o.price, 0))) AS [Полная стоимость]
                 FROM CustomerOrders co
+                JOIN Counterparties c ON co.customer_id = c.id
                 JOIN CustomerOrderItems coi ON co.id = coi.order_id
+                JOIN Products p ON coi.product_id = p.id
                 JOIN Specifications s ON coi.product_id = s.product_id
                 LEFT JOIN Materials m ON s.material_id = m.id
                 LEFT JOIN Operations o ON s.operation_id = o.id
-                GROUP BY co.id";
+                GROUP BY co.id, c.name, p.name, coi.quantity";
             return CreateTableTab("Расчет стоимости", query);
         }
 
