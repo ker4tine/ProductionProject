@@ -17,11 +17,7 @@ namespace ProductionProject
 
             TabPage page = new TabPage("Заказы");
             DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = CreatePanel();
-
-            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
-            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, query);
-            panel.Controls.Add(btnRefresh);
+            FlowLayoutPanel panel = CreatePanel(canEdit);
 
             if (canEdit)
             {
@@ -55,11 +51,7 @@ namespace ProductionProject
 
             TabPage page = new TabPage("Позиции заказов");
             DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = CreatePanel();
-
-            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
-            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, query);
-            panel.Controls.Add(btnRefresh);
+            FlowLayoutPanel panel = CreatePanel(canEdit);
 
             if (canEdit)
             {
@@ -80,9 +72,9 @@ namespace ProductionProject
             return page;
         }
 
-        private static FlowLayoutPanel CreatePanel()
+        private static FlowLayoutPanel CreatePanel(bool canEdit)
         {
-            return new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
+            return new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
         }
 
         private static DataGridView CreateGrid()
