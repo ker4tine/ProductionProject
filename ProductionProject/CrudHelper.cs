@@ -7,16 +7,9 @@ namespace ProductionProject
 {
     public static class CrudHelper
     {
-        public static TabPage CreateDictionaryTab(
-            string connectionString,
-            string title,
-            string tableName,
-            bool hasUnit,
-            bool hasPrice,
-            bool canEdit)
+        public static TabPage CreateDictionaryTab(string connectionString, string title, string tableName, bool hasUnit, bool hasPrice, bool canEdit)
         {
             string query = BuildQuery(tableName, hasUnit, hasPrice);
-
             TabPage page = new TabPage(title);
             DataGridView grid = CreateGrid();
             FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
@@ -49,12 +42,10 @@ namespace ProductionProject
         private static string BuildQuery(string tableName, bool hasUnit, bool hasPrice)
         {
             if (hasUnit && hasPrice)
-                return $"SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM {tableName}";
-
+                return $"SELECT id AS [ID], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения], price AS [Цена] FROM {tableName}";
             if (hasUnit)
-                return $"SELECT id AS [Код], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM {tableName}";
-
-            return $"SELECT id AS [Код], code AS [Артикул], name AS [Наименование], price AS [Цена] FROM {tableName}";
+                return $"SELECT id AS [ID], code AS [Артикул], name AS [Наименование], unit AS [Единица измерения] FROM {tableName}";
+            return $"SELECT id AS [ID], code AS [Артикул], name AS [Наименование], price AS [Цена] FROM {tableName}";
         }
 
         private static DataGridView CreateGrid()
@@ -84,6 +75,8 @@ namespace ProductionProject
                     DataTable table = new DataTable();
                     adapter.Fill(table);
                     grid.DataSource = table;
+                    if (grid.Columns.Contains("ID"))
+                        grid.Columns["ID"].Visible = false;
                 }
             }
             catch (Exception ex)
@@ -99,13 +92,12 @@ namespace ProductionProject
                 MessageBox.Show("Выберите строку.");
                 return 0;
             }
-
-            return Convert.ToInt32(grid.CurrentRow.Cells["Код"].Value);
+            return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
         private static void AddItem(string connectionString, DataGridView grid, string query, string title, string tableName, bool hasUnit, bool hasPrice)
         {
-            using (DictionaryEditForm form = new DictionaryEditForm("Добавление: " + title, hasUnit, hasPrice))
+            using (DictionaryEditForm form = new DictionaryEditForm("Добавление: " + title, hasUnit, hasPrice, GenerateCode(connectionString, tableName), "", "", 0, true))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
 
@@ -122,6 +114,18 @@ namespace ProductionProject
             }
         }
 
+        private static string GenerateCode(string connectionString, string tableName)
+        {
+            string prefix = tableName == "Products" ? "PR" : tableName == "Materials" ? "MT" : "OP";
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlCommand command = new SqlCommand($"SELECT ISNULL(MAX(id), 0) + 1 FROM {tableName}", connection))
+            {
+                connection.Open();
+                int nextId = Convert.ToInt32(command.ExecuteScalar());
+                return prefix + nextId.ToString("000");
+            }
+        }
+
         private static void EditItem(string connectionString, DataGridView grid, string query, string title, string tableName, bool hasUnit, bool hasPrice)
         {
             int id = GetSelectedId(grid);
@@ -132,7 +136,7 @@ namespace ProductionProject
             string unit = hasUnit ? Convert.ToString(grid.CurrentRow.Cells["Единица измерения"].Value) : "";
             decimal price = hasPrice ? Convert.ToDecimal(grid.CurrentRow.Cells["Цена"].Value) : 0;
 
-            using (DictionaryEditForm form = new DictionaryEditForm("Изменение: " + title, hasUnit, hasPrice, code, name, unit, price))
+            using (DictionaryEditForm form = new DictionaryEditForm("Изменение: " + title, hasUnit, hasPrice, code, name, unit, price, true))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
 
@@ -166,7 +170,6 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-
                 LoadGrid(connectionString, grid, query);
             }
             catch (Exception ex)
@@ -185,7 +188,6 @@ namespace ProductionProject
                 if (hasUnit) command.Parameters.AddWithValue("@unit", form.ItemUnit);
                 if (hasPrice) command.Parameters.AddWithValue("@price", form.ItemPrice);
                 if (id > 0) command.Parameters.AddWithValue("@id", id);
-
                 connection.Open();
                 command.ExecuteNonQuery();
             }
