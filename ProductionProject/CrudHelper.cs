@@ -12,11 +12,7 @@ namespace ProductionProject
             string query = BuildQuery(tableName, hasUnit, hasPrice);
             TabPage page = new TabPage(title);
             DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
-
-            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
-            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, query);
-            panel.Controls.Add(btnRefresh);
+            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
 
             if (canEdit)
             {
@@ -50,7 +46,7 @@ namespace ProductionProject
 
         private static DataGridView CreateGrid()
         {
-            return new DataGridView
+            DataGridView grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
@@ -63,6 +59,8 @@ namespace ProductionProject
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
             };
+            grid.DataBindingComplete += (s, e) => HideIdColumn(grid);
+            return grid;
         }
 
         private static void LoadGrid(string connectionString, DataGridView grid, string query)
@@ -75,14 +73,18 @@ namespace ProductionProject
                     DataTable table = new DataTable();
                     adapter.Fill(table);
                     grid.DataSource = table;
-                    if (grid.Columns.Contains("ID"))
-                        grid.Columns["ID"].Visible = false;
+                    HideIdColumn(grid);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
             }
+        }
+
+        private static void HideIdColumn(DataGridView grid)
+        {
+            if (grid.Columns.Contains("ID")) grid.Columns["ID"].Visible = false;
         }
 
         private static int GetSelectedId(DataGridView grid)
