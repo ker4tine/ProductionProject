@@ -193,11 +193,7 @@ namespace ProductionProject
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
             tabs.TabPages.Add(SpecificationCrudHelper.CreateSpecificationsTab(connectionString, canEdit));
-
-            tabs.TabPages.Add(CreateTableTab("Заметки", @"
-                SELECT n.title AS [Заголовок], u.login AS [Пользователь], n.content AS [Содержание], FORMAT(n.created_at, 'dd.MM.yyyy') AS [Дата]
-                FROM Notes n JOIN Users u ON n.user_id = u.id"));
-
+            tabs.TabPages.Add(NoteCrudHelper.CreateNotesTab(connectionString, currentUser.Id, canEdit));
             tabs.TabPages.Add(CreateCostTab());
 
             if (canEdit)
