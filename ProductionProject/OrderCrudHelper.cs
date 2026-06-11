@@ -87,7 +87,7 @@ namespace ProductionProject
 
         private static DataGridView CreateGrid()
         {
-            return new DataGridView
+            DataGridView grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
@@ -100,6 +100,9 @@ namespace ProductionProject
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
             };
+
+            grid.DataBindingComplete += (s, e) => HideServiceColumns(grid);
+            return grid;
         }
 
         private static void LoadGrid(string connectionString, DataGridView grid, string query)
@@ -112,15 +115,20 @@ namespace ProductionProject
                     DataTable table = new DataTable();
                     adapter.Fill(table);
                     grid.DataSource = table;
-                    HideColumn(grid, "ID");
-                    HideColumn(grid, "OrderID");
-                    HideColumn(grid, "ProductID");
+                    HideServiceColumns(grid);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
             }
+        }
+
+        private static void HideServiceColumns(DataGridView grid)
+        {
+            HideColumn(grid, "ID");
+            HideColumn(grid, "OrderID");
+            HideColumn(grid, "ProductID");
         }
 
         private static void HideColumn(DataGridView grid, string name)
@@ -164,7 +172,6 @@ namespace ProductionProject
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
-
             int customerId = GetCustomerId(connectionString, id);
             DateTime orderDate = Convert.ToDateTime(grid.CurrentRow.Cells["Дата заказа"].Value);
 
@@ -232,7 +239,6 @@ namespace ProductionProject
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
-
             int orderId = GetHiddenInt(grid, "OrderID");
             int productId = GetHiddenInt(grid, "ProductID");
             decimal quantity = Convert.ToDecimal(grid.CurrentRow.Cells["Количество"].Value);
@@ -250,7 +256,6 @@ namespace ProductionProject
             int id = GetSelectedId(grid);
             if (id == 0) return;
             if (MessageBox.Show("Удалить выбранную позицию заказа?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlCommand command = new SqlCommand("DELETE FROM CustomerOrderItems WHERE id = @id", connection))
             {
