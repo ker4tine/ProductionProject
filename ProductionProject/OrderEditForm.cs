@@ -34,7 +34,7 @@ namespace ProductionProject
             MinimizeBox = false;
 
             Controls.Add(new Label { Text = "Заказчик:", Location = new Point(30, 35), AutoSize = true });
-            cmbCustomer = new ComboBox { Location = new Point(140, 32), Width = 220, DropDownStyle = ComboBoxStyle.DropDownList, DisplayMember = "name", ValueMember = "id" };
+            cmbCustomer = new ComboBox { Location = new Point(140, 32), Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
             Controls.Add(cmbCustomer);
 
             Controls.Add(new Label { Text = "Дата заказа:", Location = new Point(30, 78), AutoSize = true });
@@ -55,6 +55,8 @@ namespace ProductionProject
             {
                 DataTable table = new DataTable();
                 adapter.Fill(table);
+                cmbCustomer.DisplayMember = "name";
+                cmbCustomer.ValueMember = "id";
                 cmbCustomer.DataSource = table;
                 if (CustomerId > 0) cmbCustomer.SelectedValue = CustomerId;
             }
@@ -68,7 +70,11 @@ namespace ProductionProject
                 return;
             }
 
-            CustomerId = Convert.ToInt32(cmbCustomer.SelectedValue);
+            if (cmbCustomer.SelectedValue is DataRowView row)
+                CustomerId = Convert.ToInt32(row["id"]);
+            else
+                CustomerId = Convert.ToInt32(cmbCustomer.SelectedValue);
+
             OrderDate = dtpOrderDate.Value.Date;
             DialogResult = DialogResult.OK;
             Close();
