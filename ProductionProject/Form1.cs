@@ -192,18 +192,7 @@ namespace ProductionProject
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
-
-            tabs.TabPages.Add(CreateTableTab("Спецификации", @"
-                SELECT p.name AS [Продукция],
-                       ISNULL(m.name, o.name) AS [Материал или операция],
-                       CASE WHEN m.id IS NOT NULL THEN N'Материал' ELSE N'Операция' END AS [Тип],
-                       CASE WHEN m.id IS NOT NULL THEN s.material_qty ELSE s.operation_qty END AS [Количество],
-                       ISNULL(m.unit, N'операция') AS [Ед. изм.],
-                       ISNULL(m.price, o.price) AS [Цена]
-                FROM Specifications s
-                JOIN Products p ON s.product_id = p.id
-                LEFT JOIN Materials m ON s.material_id = m.id
-                LEFT JOIN Operations o ON s.operation_id = o.id"));
+            tabs.TabPages.Add(SpecificationCrudHelper.CreateSpecificationsTab(connectionString, canEdit));
 
             tabs.TabPages.Add(CreateTableTab("Заметки", @"
                 SELECT n.title AS [Заголовок], u.login AS [Пользователь], n.content AS [Содержание], FORMAT(n.created_at, 'dd.MM.yyyy') AS [Дата]
