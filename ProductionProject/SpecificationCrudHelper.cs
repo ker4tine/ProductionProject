@@ -41,6 +41,7 @@ namespace ProductionProject
 
             page.Controls.Add(grid);
             page.Controls.Add(panel);
+            panel.BringToFront();
             LoadGrid(connectionString, grid, query);
             return page;
         }
