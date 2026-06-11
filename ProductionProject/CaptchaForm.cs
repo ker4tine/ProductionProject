@@ -1,49 +1,82 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace ProductionProject
 {
     public class CaptchaForm : Form
     {
-        private readonly int a;
-        private readonly int b;
+        private readonly string correctAnswer;
         private TextBox txtAnswer;
+        private PictureBox pictureBox;
 
         public CaptchaForm()
         {
             Random random = new Random();
-            a = random.Next(1, 10);
-            b = random.Next(1, 10);
-            BuildForm();
+            int imageNumber = random.Next(1, 5);
+            correctAnswer = imageNumber.ToString();
+            BuildForm(imageNumber);
         }
 
-        private void BuildForm()
+        private void BuildForm(int imageNumber)
         {
             Text = "Капча";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(300, 180);
+            Size = new Size(420, 330);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
 
-            Label lblQuestion = new Label
+            Label lblInfo = new Label
             {
-                Text = "Введите результат: " + a + " + " + b,
-                Location = new Point(35, 25),
+                Text = "Введите номер картинки, которая показана на экране.",
+                Location = new Point(25, 20),
+                Size = new Size(360, 25)
+            };
+
+            pictureBox = new PictureBox
+            {
+                Location = new Point(25, 55),
+                Size = new Size(350, 150),
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+
+            string imagePath = Path.Combine(Application.StartupPath, "Resources", "Captcha", imageNumber + ".png");
+            if (File.Exists(imagePath))
+            {
+                pictureBox.Image = Image.FromFile(imagePath);
+            }
+            else
+            {
+                Label lblError = new Label
+                {
+                    Text = "Файл капчи не найден: " + imagePath,
+                    Location = new Point(25, 210),
+                    Size = new Size(360, 35),
+                    ForeColor = Color.Red
+                };
+                Controls.Add(lblError);
+            }
+
+            Label lblAnswer = new Label
+            {
+                Text = "Ответ:",
+                Location = new Point(25, 220),
                 AutoSize = true
             };
 
             txtAnswer = new TextBox
             {
-                Location = new Point(35, 55),
-                Width = 200
+                Location = new Point(90, 217),
+                Width = 120
             };
 
             Button btnOk = new Button
             {
                 Text = "ОК",
-                Location = new Point(35, 90),
+                Location = new Point(90, 255),
                 Width = 90
             };
             btnOk.Click += BtnOk_Click;
@@ -51,12 +84,14 @@ namespace ProductionProject
             Button btnCancel = new Button
             {
                 Text = "Отмена",
-                Location = new Point(145, 90),
+                Location = new Point(200, 255),
                 Width = 90,
                 DialogResult = DialogResult.Cancel
             };
 
-            Controls.Add(lblQuestion);
+            Controls.Add(lblInfo);
+            Controls.Add(pictureBox);
+            Controls.Add(lblAnswer);
             Controls.Add(txtAnswer);
             Controls.Add(btnOk);
             Controls.Add(btnCancel);
@@ -64,8 +99,7 @@ namespace ProductionProject
 
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            int answer;
-            if (int.TryParse(txtAnswer.Text.Trim(), out answer) && answer == a + b)
+            if (txtAnswer.Text.Trim() == correctAnswer)
             {
                 DialogResult = DialogResult.OK;
                 Close();
