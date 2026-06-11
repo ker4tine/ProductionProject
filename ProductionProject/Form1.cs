@@ -178,7 +178,7 @@ namespace ProductionProject
                 Width = 520,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            Button btnExit = new Button { Text = "Выйти", Dock = DockStyle.Right, Width = 90 };
+            Button btnExit = new Button { Text = "Выйти", Dock = DockStyle.Right, Width = 65 };
             btnExit.Click += (s, e) => { failedAttempts = 0; currentUser = null; BuildLoginForm(); };
             topPanel.Controls.Add(userLabel);
             topPanel.Controls.Add(btnExit);
@@ -240,20 +240,17 @@ namespace ProductionProject
             DataGridView grid = CreateGrid();
             FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
 
-            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
             Button btnAdd = new Button { Text = "Добавить", Width = 100 };
             Button btnBlock = new Button { Text = "Заблокировать", Width = 120 };
             Button btnUnblock = new Button { Text = "Разблокировать", Width = 130 };
             Button btnReset = new Button { Text = "Сбросить ошибки", Width = 130 };
 
             string query = "SELECT u.id AS [ID], u.login AS [Логин], u.full_name AS [ФИО], r.name AS [Роль], CASE WHEN u.is_blocked = 1 THEN N'Да' ELSE N'Нет' END AS [Заблокирован], u.failed_attempts AS [Ошибок входа] FROM Users u JOIN Roles r ON u.role_id = r.id";
-            btnRefresh.Click += (s, e) => LoadGrid(grid, query);
             btnAdd.Click += (s, e) => AddUser(grid, query);
             btnBlock.Click += (s, e) => SetSelectedUserBlocked(grid, true, query);
             btnUnblock.Click += (s, e) => SetSelectedUserBlocked(grid, false, query);
             btnReset.Click += (s, e) => ResetSelectedUserAttempts(grid, query);
 
-            panel.Controls.Add(btnRefresh);
             panel.Controls.Add(btnAdd);
             panel.Controls.Add(btnBlock);
             panel.Controls.Add(btnUnblock);
@@ -322,17 +319,14 @@ namespace ProductionProject
         {
             TabPage page = new TabPage(title);
             DataGridView grid = CreateGrid();
-            Button refreshButton = new Button { Text = "Обновить", Dock = DockStyle.Top, Height = 32 };
-            refreshButton.Click += (s, e) => LoadGrid(grid, query);
             page.Controls.Add(grid);
-            page.Controls.Add(refreshButton);
             LoadGrid(grid, query);
             return page;
         }
 
         private DataGridView CreateGrid()
         {
-            return new DataGridView
+            DataGridView grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
@@ -345,6 +339,8 @@ namespace ProductionProject
                 MultiSelect = false,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
             };
+            grid.DataBindingComplete += (s, e) => HideIdColumn(grid);
+            return grid;
         }
 
         private TabPage CreateCostTab()
@@ -373,14 +369,19 @@ namespace ProductionProject
                     DataTable table = new DataTable();
                     adapter.Fill(table);
                     grid.DataSource = table;
-                    if (grid.Columns.Contains("ID"))
-                        grid.Columns["ID"].Visible = false;
+                    HideIdColumn(grid);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
             }
+        }
+
+        private void HideIdColumn(DataGridView grid)
+        {
+            if (grid.Columns.Contains("ID"))
+                grid.Columns["ID"].Visible = false;
         }
     }
 }
