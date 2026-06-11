@@ -9,6 +9,8 @@
     <Compile Include="CaptchaForm.cs" />
     <Compile Include="CrudHelper.cs" />
     <Compile Include="DictionaryEditForm.cs" />
+    <Compile Include="OrderEditForm.cs" />
+    <Compile Include="OrderItemEditForm.cs" />
     <Compile Include="UserEditForm.cs" />
     <Compile Include="Form1.cs"><SubType>Form</SubType></Compile>
     <Compile Include="Form1.Designer.cs"><DependentUpon>Form1.cs</DependentUpon></Compile>
