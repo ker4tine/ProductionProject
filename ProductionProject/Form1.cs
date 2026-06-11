@@ -16,9 +16,9 @@ namespace ProductionProject
         private Label lblMessage;
 
         private int failedAttempts = 0;
-        private currentUserData currentUser;
+        private CurrentUserData currentUser;
 
-        private class currentUserData
+        private class CurrentUserData
         {
             public int Id;
             public string Login;
@@ -113,7 +113,7 @@ namespace ProductionProject
                             return;
                         }
 
-                        currentUser = new currentUserData
+                        currentUser = new CurrentUserData
                         {
                             Id = Convert.ToInt32(reader["id"]),
                             Login = reader["login"].ToString(),
@@ -170,9 +170,27 @@ namespace ProductionProject
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = true;
 
-            Controls.Add(new Label { Text = "Пользователь: " + currentUser.Login + " | Роль: " + currentUser.Role, Dock = DockStyle.Top, Height = 30, TextAlign = ContentAlignment.MiddleLeft });
+            Panel topPanel = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = SystemColors.Control };
+            Label userLabel = new Label
+            {
+                Text = "Пользователь: " + currentUser.Login + " | Роль: " + currentUser.Role,
+                Dock = DockStyle.Left,
+                Width = 520,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            Button btnExit = new Button { Text = "Выйти", Dock = DockStyle.Right, Width = 90 };
+            btnExit.Click += (s, e) => { failedAttempts = 0; currentUser = null; BuildLoginForm(); };
+            topPanel.Controls.Add(userLabel);
+            topPanel.Controls.Add(btnExit);
 
-            TabControl tabs = new TabControl { Dock = DockStyle.Fill };
+            TabControl tabs = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Appearance = TabAppearance.Normal,
+                SizeMode = TabSizeMode.Normal
+            };
+
+            tabs.TabPages.Add(CreateHomeTab());
             tabs.TabPages.Add(CreateTableTab("Заказы", @"
                 SELECT co.id AS [Номер заказа], c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
                 FROM CustomerOrders co
@@ -211,12 +229,29 @@ namespace ProductionProject
                 tabs.TabPages.Add(CreateUsersTab());
 
             Controls.Add(tabs);
+            Controls.Add(topPanel);
+        }
+
+        private TabPage CreateHomeTab()
+        {
+            TabPage page = new TabPage("Главная");
+            Label label = new Label
+            {
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 12, FontStyle.Regular),
+                Text = currentUser.Role == "Администратор"
+                    ? "Вы вошли как администратор. Доступны просмотр данных и управление пользователями."
+                    : "Вы вошли как пользователь. Доступен просмотр производственных данных."
+            };
+            page.Controls.Add(label);
+            return page;
         }
 
         private TabPage CreateUsersTab()
         {
             TabPage page = new TabPage("Пользователи");
-            DataGridView grid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false };
+            DataGridView grid = CreateGrid();
             FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
 
             Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
@@ -300,13 +335,30 @@ namespace ProductionProject
         private TabPage CreateTableTab(string title, string query)
         {
             TabPage page = new TabPage(title);
-            DataGridView grid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false, RowHeadersVisible = false };
+            DataGridView grid = CreateGrid();
             Button refreshButton = new Button { Text = "Обновить", Dock = DockStyle.Top, Height = 32 };
             refreshButton.Click += (s, e) => LoadGrid(grid, query);
             page.Controls.Add(grid);
             page.Controls.Add(refreshButton);
             LoadGrid(grid, query);
             return page;
+        }
+
+        private DataGridView CreateGrid()
+        {
+            return new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AllowUserToAddRows = false,
+                RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+            };
         }
 
         private TabPage CreateCostTab()
