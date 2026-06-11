@@ -11,10 +11,10 @@ namespace ProductionProject
         private ComboBox cmbCustomer;
         private DateTimePicker dtpOrderDate;
 
-        public int CustomerId { get; private set; }
+        public object CustomerId { get; private set; }
         public DateTime OrderDate { get; private set; }
 
-        public OrderEditForm(string connectionString, string title, int customerId = 0, DateTime? orderDate = null)
+        public OrderEditForm(string connectionString, string title, object customerId = null, DateTime? orderDate = null)
         {
             this.connectionString = connectionString;
             CustomerId = customerId;
@@ -57,9 +57,10 @@ namespace ProductionProject
                 {
                     while (reader.Read())
                     {
-                        ComboItem item = new ComboItem(Convert.ToInt32(reader["id"]), reader["name"].ToString());
+                        object id = reader["id"];
+                        ComboItem item = new ComboItem(id, reader["name"].ToString());
                         cmbCustomer.Items.Add(item);
-                        if (CustomerId > 0 && item.Id == CustomerId)
+                        if (CustomerId != null && item.Id.ToString() == CustomerId.ToString())
                             cmbCustomer.SelectedItem = item;
                     }
                 }
@@ -86,10 +87,10 @@ namespace ProductionProject
 
         private class ComboItem
         {
-            public int Id { get; private set; }
+            public object Id { get; private set; }
             public string Name { get; private set; }
 
-            public ComboItem(int id, string name)
+            public ComboItem(object id, string name)
             {
                 Id = id;
                 Name = name;
