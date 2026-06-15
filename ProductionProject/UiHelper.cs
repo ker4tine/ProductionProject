@@ -134,9 +134,43 @@ namespace ProductionProject
             return panel;
         }
 
+        public static TextBox AddStartsWithSearch(FlowLayoutPanel toolbar, BindingSource source, string columnName, string caption)
+        {
+            Label label = new Label
+            {
+                Text = caption,
+                AutoSize = true,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(18, 7, 4, 2),
+                ForeColor = HeaderText,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            TextBox searchBox = new TextBox
+            {
+                Width = 180,
+                Height = 24,
+                Margin = new Padding(3, 5, 3, 2)
+            };
+
+            searchBox.TextChanged += (s, e) => ApplyStartsWithFilter(source, columnName, searchBox.Text);
+            toolbar.Controls.Add(label);
+            toolbar.Controls.Add(searchBox);
+            return searchBox;
+        }
+
+        public static void ApplyStartsWithFilter(BindingSource source, string columnName, string text)
+        {
+            string value = text.Trim().Replace("'", "''").Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]");
+            source.Filter = string.IsNullOrWhiteSpace(value) ? "" : string.Format("CONVERT([{0}], 'System.String') LIKE '{1}%'", columnName, value);
+        }
+
         public static void BindTable(DataGridView grid, BindingSource source, DataTable table)
         {
+            string filter = source.Filter;
             source.DataSource = table;
+            source.Filter = filter;
             grid.DataSource = source;
             HideServiceColumns(grid);
         }
