@@ -10,28 +10,38 @@ namespace ProductionProject
         public static TabPage CreateDictionaryTab(string connectionString, string title, string tableName, bool hasUnit, bool hasPrice, bool canEdit)
         {
             string query = BuildQuery(tableName, hasUnit, hasPrice);
-            TabPage page = new TabPage(title);
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
+            TabPage page = new TabPage(title) { BackColor = UiHelper.LightBackground };
+            BindingSource source = new BindingSource();
+            DataGridView grid = UiHelper.CreateGrid();
+            FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
 
             if (canEdit)
             {
-                Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-                Button btnEdit = new Button { Text = "Изменить", Width = 100 };
-                Button btnDelete = new Button { Text = "Удалить", Width = 100 };
+                Button btnAdd = UiHelper.CreateButton("Добавить", 100);
+                Button btnEdit = UiHelper.CreateButton("Изменить", 100);
+                Button btnDelete = UiHelper.CreateButton("Удалить", 100);
 
-                btnAdd.Click += (s, e) => AddItem(connectionString, grid, query, title, tableName, hasUnit, hasPrice);
-                btnEdit.Click += (s, e) => EditItem(connectionString, grid, query, title, tableName, hasUnit, hasPrice);
-                btnDelete.Click += (s, e) => DeleteItem(connectionString, grid, query, tableName);
+                btnAdd.Click += (s, e) => AddItem(connectionString, grid, source, query, title, tableName, hasUnit, hasPrice);
+                btnEdit.Click += (s, e) => EditItem(connectionString, grid, source, query, title, tableName, hasUnit, hasPrice);
+                btnDelete.Click += (s, e) => DeleteItem(connectionString, grid, source, query, tableName);
 
-                panel.Controls.Add(btnAdd);
-                panel.Controls.Add(btnEdit);
-                panel.Controls.Add(btnDelete);
+                toolbar.Controls.Add(btnAdd);
+                toolbar.Controls.Add(btnEdit);
+                toolbar.Controls.Add(btnDelete);
             }
 
-            page.Controls.Add(grid);
-            page.Controls.Add(panel);
-            LoadGrid(connectionString, grid, query);
+            Button btnRefresh = UiHelper.CreateButton("Обновить", 100);
+            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
+            toolbar.Controls.Add(btnRefresh);
+
+            Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
+            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
+            content.Controls.Add(tablePanel);
+            content.Controls.Add(toolbar);
+
+            page.Controls.Add(content);
+            page.Controls.Add(UiHelper.CreateTopPanel(title, "Справочник производственной системы"));
+            LoadGrid(connectionString, grid, source, query);
             return page;
         }
 
@@ -44,26 +54,7 @@ namespace ProductionProject
             return $"SELECT id AS [ID], code AS [Артикул], name AS [Наименование], price AS [Цена] FROM {tableName}";
         }
 
-        private static DataGridView CreateGrid()
-        {
-            DataGridView grid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                BackgroundColor = System.Drawing.Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-            grid.DataBindingComplete += (s, e) => HideIdColumn(grid);
-            return grid;
-        }
-
-        private static void LoadGrid(string connectionString, DataGridView grid, string query)
+        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             try
             {
@@ -72,7 +63,7 @@ namespace ProductionProject
                 {
                     DataTable table = new DataTable();
                     adapter.Fill(table);
-                    grid.DataSource = table;
+                    UiHelper.BindTable(grid, source, table);
                     HideIdColumn(grid);
                 }
             }
@@ -97,7 +88,7 @@ namespace ProductionProject
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
-        private static void AddItem(string connectionString, DataGridView grid, string query, string title, string tableName, bool hasUnit, bool hasPrice)
+        private static void AddItem(string connectionString, DataGridView grid, BindingSource source, string query, string title, string tableName, bool hasUnit, bool hasPrice)
         {
             using (DictionaryEditForm form = new DictionaryEditForm("Добавление: " + title, hasUnit, hasPrice, GenerateCode(connectionString, tableName), "", "", 0, true))
             {
@@ -112,7 +103,7 @@ namespace ProductionProject
                     sql = $"INSERT INTO {tableName} (code, name, price) VALUES (@code, @name, @price)";
 
                 ExecuteSave(connectionString, sql, form, hasUnit, hasPrice, 0);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
@@ -128,7 +119,7 @@ namespace ProductionProject
             }
         }
 
-        private static void EditItem(string connectionString, DataGridView grid, string query, string title, string tableName, bool hasUnit, bool hasPrice)
+        private static void EditItem(string connectionString, DataGridView grid, BindingSource source, string query, string title, string tableName, bool hasUnit, bool hasPrice)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -151,11 +142,11 @@ namespace ProductionProject
                     sql = $"UPDATE {tableName} SET code = @code, name = @name, price = @price WHERE id = @id";
 
                 ExecuteSave(connectionString, sql, form, hasUnit, hasPrice, id);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void DeleteItem(string connectionString, DataGridView grid, string query, string tableName)
+        private static void DeleteItem(string connectionString, DataGridView grid, BindingSource source, string query, string tableName)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -172,7 +163,7 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
             catch (Exception ex)
             {
