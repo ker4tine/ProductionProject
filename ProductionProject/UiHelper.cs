@@ -55,7 +55,7 @@ namespace ProductionProject
             return new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 52,
+                Height = 74,
                 BackColor = Color.White,
                 Padding = new Padding(8, 7, 8, 6),
                 AutoScroll = false,
@@ -137,27 +137,35 @@ namespace ProductionProject
 
         public static TextBox AddStartsWithSearch(FlowLayoutPanel toolbar, BindingSource source, string columnName, string caption)
         {
+            Panel searchPanel = new Panel
+            {
+                Width = 360,
+                Height = 28,
+                Margin = new Padding(18, 2, 3, 2)
+            };
+
             Label label = new Label
             {
                 Text = caption,
-                AutoSize = true,
-                Height = 28,
+                Location = new Point(0, 5),
+                Width = 145,
+                Height = 20,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(18, 7, 4, 2),
                 ForeColor = HeaderText,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
 
             TextBox searchBox = new TextBox
             {
-                Width = 180,
-                Height = 24,
-                Margin = new Padding(3, 5, 3, 2)
+                Location = new Point(150, 3),
+                Width = 200,
+                Height = 24
             };
 
             searchBox.TextChanged += (s, e) => ApplyStartsWithFilter(source, columnName, searchBox.Text);
-            toolbar.Controls.Add(label);
-            toolbar.Controls.Add(searchBox);
+            searchPanel.Controls.Add(label);
+            searchPanel.Controls.Add(searchBox);
+            toolbar.Controls.Add(searchPanel);
             return searchBox;
         }
 
