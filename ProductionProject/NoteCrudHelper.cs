@@ -50,6 +50,7 @@ namespace ProductionProject
             toolbar.Controls.Add(btnRefresh);
             toolbar.Controls.Add(btnOpenPage);
             toolbar.Controls.Add(btnOpenJson);
+            UiHelper.AddStartsWithSearch(toolbar, source, "Заголовок", "Поиск по заголовку:");
 
             Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
