@@ -222,7 +222,7 @@ namespace ProductionProject
             TabControl tabs = new TabControl { Dock = DockStyle.Fill, Appearance = TabAppearance.Normal, SizeMode = TabSizeMode.Normal };
             bool canEdit = currentUser.Role == "Администратор";
 
-            tabs.TabPages.Add(CreateHomeTab());
+            tabs.TabPages.Add(HomeTabHelper.CreateHomeTab(currentUser.Login, currentUser.Role));
             tabs.TabPages.Add(OrderCrudHelper.CreateOrdersTab(connectionString, canEdit));
             tabs.TabPages.Add(OrderCrudHelper.CreateOrderItemsTab(connectionString, canEdit));
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEdit));
@@ -230,179 +230,13 @@ namespace ProductionProject
             tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
             tabs.TabPages.Add(SpecificationCrudHelper.CreateSpecificationsTab(connectionString, canEdit));
             tabs.TabPages.Add(NoteCrudHelper.CreateNotesTab(connectionString, currentUser.Id, canEdit));
-            tabs.TabPages.Add(CreateCostTab());
+            tabs.TabPages.Add(CostTabHelper.CreateCostTab(connectionString));
 
             if (canEdit)
-                tabs.TabPages.Add(CreateUsersTab());
+                tabs.TabPages.Add(UserTabHelper.CreateUsersTab(connectionString));
 
             Controls.Add(tabs);
             Controls.Add(topPanel);
-        }
-
-        private TabPage CreateHomeTab()
-        {
-            TabPage page = new TabPage("Главная");
-            Label label = new Label
-            {
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", 12, FontStyle.Regular),
-                Text = currentUser.Role == "Администратор"
-                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников/заказов. API заметок: http://localhost:8080/api/notes"
-                    : "Вы вошли как пользователь. Доступен только просмотр производственных данных. API заметок: http://localhost:8080/api/notes"
-            };
-            page.Controls.Add(label);
-            return page;
-        }
-
-        private TabPage CreateUsersTab()
-        {
-            TabPage page = new TabPage("Пользователи");
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
-
-            Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-            Button btnBlock = new Button { Text = "Заблокировать", Width = 120 };
-            Button btnUnblock = new Button { Text = "Разблокировать", Width = 130 };
-            Button btnReset = new Button { Text = "Сбросить ошибки", Width = 130 };
-
-            string query = "SELECT u.id AS [ID], u.login AS [Логин], u.full_name AS [ФИО], r.name AS [Роль], CASE WHEN u.is_blocked = 1 THEN N'Да' ELSE N'Нет' END AS [Заблокирован], u.failed_attempts AS [Ошибок входа] FROM Users u JOIN Roles r ON u.role_id = r.id";
-            btnAdd.Click += (s, e) => AddUser(grid, query);
-            btnBlock.Click += (s, e) => SetSelectedUserBlocked(grid, true, query);
-            btnUnblock.Click += (s, e) => SetSelectedUserBlocked(grid, false, query);
-            btnReset.Click += (s, e) => ResetSelectedUserAttempts(grid, query);
-
-            panel.Controls.Add(btnAdd);
-            panel.Controls.Add(btnBlock);
-            panel.Controls.Add(btnUnblock);
-            panel.Controls.Add(btnReset);
-            page.Controls.Add(grid);
-            page.Controls.Add(panel);
-            LoadGrid(grid, query);
-            return page;
-        }
-
-        private void AddUser(DataGridView grid, string query)
-        {
-            using (UserEditForm form = new UserEditForm())
-            {
-                if (form.ShowDialog() != DialogResult.OK) return;
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlCommand command = new SqlCommand("INSERT INTO Users (login, password_hash, full_name, role_id) VALUES (@login, @password, @name, @role)", connection))
-                {
-                    command.Parameters.AddWithValue("@login", form.UserLogin);
-                    command.Parameters.AddWithValue("@password", form.UserPassword);
-                    command.Parameters.AddWithValue("@name", form.FullName);
-                    command.Parameters.AddWithValue("@role", form.RoleId);
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-                LoadGrid(grid, query);
-            }
-        }
-
-        private int GetSelectedUserId(DataGridView grid)
-        {
-            if (grid.CurrentRow == null) return 0;
-            return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
-        }
-
-        private void SetSelectedUserBlocked(DataGridView grid, bool blocked, string query)
-        {
-            int id = GetSelectedUserId(grid);
-            if (id == 0) return;
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlCommand command = new SqlCommand("UPDATE Users SET is_blocked = @blocked WHERE id = @id", connection))
-            {
-                command.Parameters.AddWithValue("@blocked", blocked);
-                command.Parameters.AddWithValue("@id", id);
-                connection.Open();
-                command.ExecuteNonQuery();
-            }
-            LoadGrid(grid, query);
-        }
-
-        private void ResetSelectedUserAttempts(DataGridView grid, string query)
-        {
-            int id = GetSelectedUserId(grid);
-            if (id == 0) return;
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlCommand command = new SqlCommand("UPDATE Users SET failed_attempts = 0, is_blocked = 0 WHERE id = @id", connection))
-            {
-                command.Parameters.AddWithValue("@id", id);
-                connection.Open();
-                command.ExecuteNonQuery();
-            }
-            LoadGrid(grid, query);
-        }
-
-        private TabPage CreateTableTab(string title, string query)
-        {
-            TabPage page = new TabPage(title);
-            DataGridView grid = CreateGrid();
-            page.Controls.Add(grid);
-            LoadGrid(grid, query);
-            return page;
-        }
-
-        private DataGridView CreateGrid()
-        {
-            DataGridView grid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-            grid.DataBindingComplete += (s, e) => HideIdColumn(grid);
-            return grid;
-        }
-
-        private TabPage CreateCostTab()
-        {
-            string query = @"
-                SELECT c.name AS [Заказчик], p.name AS [Продукция], coi.quantity AS [Количество],
-                       SUM(coi.quantity * (ISNULL(s.material_qty, 0) * ISNULL(m.price, 0) + ISNULL(s.operation_qty, 0) * ISNULL(o.price, 0))) AS [Полная стоимость]
-                FROM CustomerOrders co
-                JOIN Counterparties c ON co.customer_id = c.id
-                JOIN CustomerOrderItems coi ON co.id = coi.order_id
-                JOIN Products p ON coi.product_id = p.id
-                JOIN Specifications s ON coi.product_id = s.product_id
-                LEFT JOIN Materials m ON s.material_id = m.id
-                LEFT JOIN Operations o ON s.operation_id = o.id
-                GROUP BY c.name, p.name, coi.quantity";
-            return CreateTableTab("Расчет стоимости", query);
-        }
-
-        private void LoadGrid(DataGridView grid, string query)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
-                {
-                    DataTable table = new DataTable();
-                    adapter.Fill(table);
-                    grid.DataSource = table;
-                    HideIdColumn(grid);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
-            }
-        }
-
-        private void HideIdColumn(DataGridView grid)
-        {
-            if (grid.Columns.Contains("ID"))
-                grid.Columns["ID"].Visible = false;
         }
     }
 }
