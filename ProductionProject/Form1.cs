@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Windows.Forms;
@@ -29,6 +28,7 @@ namespace ProductionProject
         public Form1()
         {
             InitializeComponent();
+            StartPosition = FormStartPosition.CenterScreen;
             StartApiServer();
             FormClosing += Form1_FormClosing;
             BuildLoginForm();
@@ -56,24 +56,65 @@ namespace ProductionProject
         private void BuildLoginForm()
         {
             Controls.Clear();
+            UiHelper.ApplyFormStyle(this);
             Text = "Авторизация";
-            StartPosition = FormStartPosition.CenterScreen;
-            Size = new Size(380, 270);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
+            Size = new Size(1100, 650);
+            MinimumSize = new Size(900, 560);
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            CenterToScreen();
 
-            Controls.Add(new Label { Text = "Вход в систему", Font = new Font("Segoe UI", 14, FontStyle.Bold), AutoSize = true, Location = new Point(115, 20) });
-            Controls.Add(new Label { Text = "Логин:", Location = new Point(40, 70), AutoSize = true });
-            txtLogin = new TextBox { Location = new Point(140, 67), Width = 170 };
-            Controls.Add(txtLogin);
-            Controls.Add(new Label { Text = "Пароль:", Location = new Point(40, 105), AutoSize = true });
-            txtPassword = new TextBox { Location = new Point(140, 102), Width = 170, UseSystemPasswordChar = true };
-            Controls.Add(txtPassword);
-            btnLogin = new Button { Text = "Войти", Location = new Point(140, 140), Width = 100 };
+            Panel header = UiHelper.CreateTopPanel("Производственный учет", "Вход в информационную систему");
+            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(0) };
+            Panel card = new Panel { Size = new Size(420, 300), BackColor = Color.White, Padding = new Padding(28) };
+            card.Anchor = AnchorStyles.None;
+            card.Location = new Point((ClientSize.Width - card.Width) / 2, (ClientSize.Height - header.Height - card.Height) / 2);
+            content.Resize += (s, e) => card.Location = new Point((content.ClientSize.Width - card.Width) / 2, (content.ClientSize.Height - card.Height) / 2);
+
+            Label title = new Label
+            {
+                Text = "Вход в систему",
+                Font = new Font("Segoe UI", 17, FontStyle.Bold),
+                ForeColor = UiHelper.HeaderText,
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            Label subtitle = new Label
+            {
+                Text = "Введите логин и пароль для продолжения",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.DimGray,
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            Label lblLogin = new Label { Text = "Логин", Location = new Point(28, 90), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            txtLogin = new TextBox { Location = new Point(28, 112), Width = 364, Height = 26 };
+
+            Label lblPassword = new Label { Text = "Пароль", Location = new Point(28, 148), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            txtPassword = new TextBox { Location = new Point(28, 170), Width = 364, Height = 26, UseSystemPasswordChar = true };
+
+            btnLogin = UiHelper.CreateButton("Войти", 364);
+            btnLogin.Location = new Point(28, 214);
+            btnLogin.Height = 32;
             btnLogin.Click += BtnLogin_Click;
-            Controls.Add(btnLogin);
-            lblMessage = new Label { ForeColor = Color.Red, Location = new Point(40, 180), Size = new Size(300, 50) };
-            Controls.Add(lblMessage);
+
+            lblMessage = new Label { ForeColor = Color.Red, Location = new Point(28, 252), Size = new Size(364, 40), TextAlign = ContentAlignment.TopCenter };
+
+            card.Controls.Add(lblMessage);
+            card.Controls.Add(btnLogin);
+            card.Controls.Add(lblPassword);
+            card.Controls.Add(txtPassword);
+            card.Controls.Add(lblLogin);
+            card.Controls.Add(txtLogin);
+            card.Controls.Add(subtitle);
+            card.Controls.Add(title);
+            content.Controls.Add(card);
+            Controls.Add(content);
+            Controls.Add(header);
         }
 
         private void BtnLogin_Click(object sender, EventArgs e)
@@ -200,11 +241,14 @@ namespace ProductionProject
         private void BuildMainForm()
         {
             Controls.Clear();
+            UiHelper.ApplyFormStyle(this);
             Text = "Производственный учет";
             Size = new Size(1100, 650);
+            MinimumSize = new Size(900, 560);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.Sizable;
             MaximizeBox = true;
+            CenterToScreen();
 
             Panel topPanel = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = SystemColors.Control };
             Label userLabel = new Label
