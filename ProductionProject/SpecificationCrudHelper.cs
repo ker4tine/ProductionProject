@@ -22,59 +22,56 @@ namespace ProductionProject
                 LEFT JOIN Materials m ON s.material_id = m.id
                 LEFT JOIN Operations o ON s.operation_id = o.id";
 
-            TabPage page = new TabPage("Спецификации");
-            Panel contentPanel = new Panel { Dock = DockStyle.Fill };
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
+            TabPage page = new TabPage("Спецификации") { BackColor = UiHelper.LightBackground };
+            BindingSource source = new BindingSource();
+            DataGridView grid = UiHelper.CreateGrid();
+            grid.DataBindingComplete += (s, e) => HideColumns(grid);
+            FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
 
             if (canEdit)
             {
-                Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-                Button btnEdit = new Button { Text = "Изменить", Width = 100 };
-                Button btnDelete = new Button { Text = "Удалить", Width = 100 };
-                btnAdd.Click += (s, e) => AddSpec(connectionString, grid, query);
-                btnEdit.Click += (s, e) => EditSpec(connectionString, grid, query);
-                btnDelete.Click += (s, e) => DeleteSpec(connectionString, grid, query);
-                panel.Controls.Add(btnAdd);
-                panel.Controls.Add(btnEdit);
-                panel.Controls.Add(btnDelete);
+                Button btnAdd = UiHelper.CreateButton("Добавить", 100);
+                Button btnEdit = UiHelper.CreateButton("Изменить", 100);
+                Button btnDelete = UiHelper.CreateButton("Удалить", 100);
+                btnAdd.Click += (s, e) => AddSpec(connectionString, grid, source, query);
+                btnEdit.Click += (s, e) => EditSpec(connectionString, grid, source, query);
+                btnDelete.Click += (s, e) => DeleteSpec(connectionString, grid, source, query);
+                toolbar.Controls.Add(btnAdd);
+                toolbar.Controls.Add(btnEdit);
+                toolbar.Controls.Add(btnDelete);
             }
 
-            contentPanel.Controls.Add(grid);
-            contentPanel.Controls.Add(panel);
-            page.Controls.Add(contentPanel);
-            LoadGrid(connectionString, grid, query);
+            Button btnRefresh = UiHelper.CreateButton("Обновить", 100);
+            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
+            toolbar.Controls.Add(btnRefresh);
+
+            Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
+            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
+            content.Controls.Add(tablePanel);
+            content.Controls.Add(toolbar);
+
+            page.Controls.Add(content);
+            page.Controls.Add(UiHelper.CreateTopPanel("Спецификации", "Состав продукции: материалы и технологические операции"));
+            LoadGrid(connectionString, grid, source, query);
             return page;
         }
 
-        private static DataGridView CreateGrid()
+        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source, string query)
         {
-            DataGridView grid = new DataGridView
+            try
             {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                BackgroundColor = System.Drawing.Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-            grid.DataBindingComplete += (s, e) => HideColumns(grid);
-            return grid;
-        }
-
-        private static void LoadGrid(string connectionString, DataGridView grid, string query)
-        {
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+                {
+                    DataTable table = new DataTable();
+                    adapter.Fill(table);
+                    UiHelper.BindTable(grid, source, table);
+                    HideColumns(grid);
+                }
+            }
+            catch (Exception ex)
             {
-                DataTable table = new DataTable();
-                adapter.Fill(table);
-                grid.DataSource = table;
-                HideColumns(grid);
+                MessageBox.Show("Ошибка загрузки спецификаций: " + ex.Message);
             }
         }
 
@@ -101,17 +98,17 @@ namespace ProductionProject
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
-        private static void AddSpec(string connectionString, DataGridView grid, string query)
+        private static void AddSpec(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             using (SpecificationEditForm form = new SpecificationEditForm(connectionString, "Добавление спецификации"))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
                 SaveSpec(connectionString, "INSERT INTO Specifications (product_id, material_id, operation_id, material_qty, operation_qty) VALUES (@product, @material, @operation, @materialQty, @operationQty)", form, 0);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void EditSpec(string connectionString, DataGridView grid, string query)
+        private static void EditSpec(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -125,11 +122,11 @@ namespace ProductionProject
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
                 SaveSpec(connectionString, "UPDATE Specifications SET product_id=@product, material_id=@material, operation_id=@operation, material_qty=@materialQty, operation_qty=@operationQty WHERE id=@id", form, id);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void DeleteSpec(string connectionString, DataGridView grid, string query)
+        private static void DeleteSpec(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -142,7 +139,7 @@ namespace ProductionProject
                 connection.Open();
                 command.ExecuteNonQuery();
             }
-            LoadGrid(connectionString, grid, query);
+            LoadGrid(connectionString, grid, source, query);
         }
 
         private static void SaveSpec(string connectionString, string sql, SpecificationEditForm form, int id)
