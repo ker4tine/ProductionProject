@@ -34,6 +34,7 @@ namespace ProductionProject
             toolbar.Controls.Add(btnUnblock);
             toolbar.Controls.Add(btnReset);
             toolbar.Controls.Add(btnRefresh);
+            UiHelper.AddStartsWithSearch(toolbar, source, "Логин", "Поиск по логину:");
 
             Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
