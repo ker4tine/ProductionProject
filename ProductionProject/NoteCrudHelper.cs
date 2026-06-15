@@ -19,42 +19,47 @@ namespace ProductionProject
                 JOIN Users u ON n.user_id = u.id
                 ORDER BY n.created_at DESC, n.id DESC";
 
-            TabPage page = new TabPage("Заметки");
-            Panel contentPanel = new Panel { Dock = DockStyle.Fill };
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
+            TabPage page = new TabPage("Заметки") { BackColor = UiHelper.LightBackground };
+            BindingSource source = new BindingSource();
+            DataGridView grid = UiHelper.CreateGrid();
+            FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
 
             if (canEdit)
             {
-                Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-                Button btnEdit = new Button { Text = "Изменить", Width = 100 };
-                Button btnDelete = new Button { Text = "Удалить", Width = 100 };
+                Button btnAdd = UiHelper.CreateButton("Добавить", 100);
+                Button btnEdit = UiHelper.CreateButton("Изменить", 100);
+                Button btnDelete = UiHelper.CreateButton("Удалить", 100);
 
-                btnAdd.Click += (s, e) => AddNote(connectionString, currentUserId, grid, query);
-                btnEdit.Click += (s, e) => EditNote(connectionString, grid, query);
-                btnDelete.Click += (s, e) => DeleteNote(connectionString, grid, query);
+                btnAdd.Click += (s, e) => AddNote(connectionString, currentUserId, grid, source, query);
+                btnEdit.Click += (s, e) => EditNote(connectionString, grid, source, query);
+                btnDelete.Click += (s, e) => DeleteNote(connectionString, grid, source, query);
 
-                panel.Controls.Add(btnAdd);
-                panel.Controls.Add(btnEdit);
-                panel.Controls.Add(btnDelete);
+                toolbar.Controls.Add(btnAdd);
+                toolbar.Controls.Add(btnEdit);
+                toolbar.Controls.Add(btnDelete);
             }
 
-            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
-            Button btnOpenPage = new Button { Text = "Открыть страницу", Width = 140 };
-            Button btnOpenJson = new Button { Text = "Открыть JSON", Width = 120 };
+            Button btnRefresh = UiHelper.CreateButton("Обновить", 100);
+            Button btnOpenPage = UiHelper.CreateButton("Веб-представление", 160);
+            Button btnOpenJson = UiHelper.CreateButton("API JSON", 120);
 
-            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, query);
+            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
             btnOpenPage.Click += (s, e) => OpenUrl(NotesPageUrl);
             btnOpenJson.Click += (s, e) => OpenUrl(NotesJsonUrl);
 
-            panel.Controls.Add(btnRefresh);
-            panel.Controls.Add(btnOpenPage);
-            panel.Controls.Add(btnOpenJson);
+            toolbar.Controls.Add(btnRefresh);
+            toolbar.Controls.Add(btnOpenPage);
+            toolbar.Controls.Add(btnOpenJson);
 
-            contentPanel.Controls.Add(grid);
-            contentPanel.Controls.Add(panel);
-            page.Controls.Add(contentPanel);
-            LoadGrid(connectionString, grid, query);
+            Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
+            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
+            content.Controls.Add(tablePanel);
+            content.Controls.Add(toolbar);
+
+            page.Controls.Add(content);
+            page.Controls.Add(UiHelper.CreateTopPanel("Заметки производственной системы", "Работа с заметками и встроенным API"));
+
+            LoadGrid(connectionString, grid, source, query);
             return page;
         }
 
@@ -70,26 +75,7 @@ namespace ProductionProject
             }
         }
 
-        private static DataGridView CreateGrid()
-        {
-            DataGridView grid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                BackgroundColor = System.Drawing.Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-            grid.DataBindingComplete += (s, e) => HideIdColumn(grid);
-            return grid;
-        }
-
-        private static void LoadGrid(string connectionString, DataGridView grid, string query)
+        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             try
             {
@@ -98,7 +84,7 @@ namespace ProductionProject
                 {
                     DataTable table = new DataTable();
                     adapter.Fill(table);
-                    grid.DataSource = table;
+                    UiHelper.BindTable(grid, source, table);
                     HideIdColumn(grid);
                 }
             }
@@ -123,7 +109,7 @@ namespace ProductionProject
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
-        private static void AddNote(string connectionString, int currentUserId, DataGridView grid, string query)
+        private static void AddNote(string connectionString, int currentUserId, DataGridView grid, BindingSource source, string query)
         {
             using (NoteEditForm form = new NoteEditForm("Добавление заметки"))
             {
@@ -138,11 +124,11 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void EditNote(string connectionString, DataGridView grid, string query)
+        private static void EditNote(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -163,11 +149,11 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void DeleteNote(string connectionString, DataGridView grid, string query)
+        private static void DeleteNote(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -180,7 +166,7 @@ namespace ProductionProject
                 connection.Open();
                 command.ExecuteNonQuery();
             }
-            LoadGrid(connectionString, grid, query);
+            LoadGrid(connectionString, grid, source, query);
         }
     }
 }
