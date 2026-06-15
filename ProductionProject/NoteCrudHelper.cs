@@ -1,12 +1,16 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace ProductionProject
 {
     public static class NoteCrudHelper
     {
+        private const string NotesPageUrl = "http://localhost:8080/notes";
+        private const string NotesJsonUrl = "http://localhost:8080/api/notes";
+
         public static TabPage CreateNotesTab(string connectionString, int currentUserId, bool canEdit)
         {
             string query = @"
@@ -18,7 +22,7 @@ namespace ProductionProject
             TabPage page = new TabPage("Заметки");
             Panel contentPanel = new Panel { Dock = DockStyle.Fill };
             DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
+            FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38 };
 
             if (canEdit)
             {
@@ -35,11 +39,35 @@ namespace ProductionProject
                 panel.Controls.Add(btnDelete);
             }
 
+            Button btnRefresh = new Button { Text = "Обновить", Width = 100 };
+            Button btnOpenPage = new Button { Text = "Открыть страницу", Width = 140 };
+            Button btnOpenJson = new Button { Text = "Открыть JSON", Width = 120 };
+
+            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, query);
+            btnOpenPage.Click += (s, e) => OpenUrl(NotesPageUrl);
+            btnOpenJson.Click += (s, e) => OpenUrl(NotesJsonUrl);
+
+            panel.Controls.Add(btnRefresh);
+            panel.Controls.Add(btnOpenPage);
+            panel.Controls.Add(btnOpenJson);
+
             contentPanel.Controls.Add(grid);
             contentPanel.Controls.Add(panel);
             page.Controls.Add(contentPanel);
             LoadGrid(connectionString, grid, query);
             return page;
+        }
+
+        private static void OpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(url);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Не удалось открыть ссылку: " + ex.Message);
+            }
         }
 
         private static DataGridView CreateGrid()
