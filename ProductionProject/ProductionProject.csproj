@@ -57,6 +57,7 @@
     <Compile Include="NoteEditForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="NotesApiServer.cs" />
     <Compile Include="OrderCrudHelper.cs" />
     <Compile Include="OrderEditForm.cs">
       <SubType>Form</SubType>
