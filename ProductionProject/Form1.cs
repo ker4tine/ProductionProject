@@ -17,6 +17,7 @@ namespace ProductionProject
 
         private int failedAttempts = 0;
         private CurrentUserData currentUser;
+        private NotesApiServer apiServer;
 
         private class CurrentUserData
         {
@@ -28,7 +29,28 @@ namespace ProductionProject
         public Form1()
         {
             InitializeComponent();
+            StartApiServer();
+            FormClosing += Form1_FormClosing;
             BuildLoginForm();
+        }
+
+        private void StartApiServer()
+        {
+            try
+            {
+                apiServer = new NotesApiServer(connectionString);
+                apiServer.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Не удалось запустить API заметок: " + ex.Message);
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (apiServer != null)
+                apiServer.Stop();
         }
 
         private void BuildLoginForm()
@@ -226,8 +248,8 @@ namespace ProductionProject
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 12, FontStyle.Regular),
                 Text = currentUser.Role == "Администратор"
-                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников/заказов."
-                    : "Вы вошли как пользователь. Доступен только просмотр производственных данных."
+                    ? "Вы вошли как администратор. Доступны просмотр данных, управление пользователями и редактирование справочников/заказов. API заметок: http://localhost:8080/api/notes"
+                    : "Вы вошли как пользователь. Доступен только просмотр производственных данных. API заметок: http://localhost:8080/api/notes"
             };
             page.Controls.Add(label);
             return page;
