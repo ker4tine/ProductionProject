@@ -105,6 +105,7 @@ namespace ProductionProject
             grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            grid.DataBindingComplete += (s, e) => HideServiceColumns(grid);
             return grid;
         }
 
@@ -137,6 +138,11 @@ namespace ProductionProject
         {
             source.DataSource = table;
             grid.DataSource = source;
+            HideServiceColumns(grid);
+        }
+
+        public static void HideServiceColumns(DataGridView grid)
+        {
             HideColumn(grid, "ID");
             HideColumn(grid, "OrderID");
             HideColumn(grid, "ProductID");
