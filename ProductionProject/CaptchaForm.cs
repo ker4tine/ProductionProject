@@ -9,12 +9,9 @@ namespace ProductionProject
     public class CaptchaForm : Form
     {
         private readonly Random random = new Random();
-        private readonly List<PictureBox> targetCells = new List<PictureBox>();
-        private readonly List<PictureBox> sourcePieces = new List<PictureBox>();
-        private readonly Dictionary<PictureBox, int> placedPieces = new Dictionary<PictureBox, int>();
-        private Image[] pieces;
-        private int selectedPieceIndex = -1;
-        private PictureBox selectedSourceBox;
+        private readonly List<PictureBox> boxes = new List<PictureBox>();
+        private readonly Dictionary<PictureBox, int> angles = new Dictionary<PictureBox, int>();
+        private Image[] parts;
 
         public CaptchaForm()
         {
@@ -25,249 +22,168 @@ namespace ProductionProject
         {
             Text = "Проверка безопасности";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(720, 500);
+            Size = new Size(420, 460);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
 
-            Label lblInfo = new Label
+            Controls.Add(new Label
             {
-                Text = "Соберите картинку: выберите фрагмент снизу и нажмите на нужную ячейку сверху.",
+                Text = "Нажимайте на части картинки, чтобы повернуть их правильно.",
                 Location = new Point(25, 20),
-                Size = new Size(650, 25)
-            };
-            Controls.Add(lblInfo);
+                Size = new Size(360, 40),
+                TextAlign = ContentAlignment.MiddleCenter
+            });
 
-            Image sourceImage = LoadRandomImage();
-            pieces = SplitImage(sourceImage, 2, 2);
+            parts = SplitImage(LoadImage(), 2, 2);
 
-            Label lblTarget = new Label
+            Panel panel = new Panel
             {
-                Text = "Поле сборки:",
-                Location = new Point(95, 55),
-                Size = new Size(200, 25)
-            };
-            Controls.Add(lblTarget);
-
-            Panel targetPanel = new Panel
-            {
-                Location = new Point(75, 80),
+                Location = new Point(80, 80),
                 Size = new Size(240, 240),
                 BorderStyle = BorderStyle.FixedSingle
             };
-            Controls.Add(targetPanel);
-
-            int cellSize = 120;
-            for (int i = 0; i < 4; i++)
-            {
-                PictureBox cell = new PictureBox
-                {
-                    Location = new Point((i % 2) * cellSize, (i / 2) * cellSize),
-                    Size = new Size(cellSize, cellSize),
-                    BorderStyle = BorderStyle.FixedSingle,
-                    BackColor = Color.WhiteSmoke,
-                    SizeMode = PictureBoxSizeMode.StretchImage,
-                    Tag = i,
-                    Cursor = Cursors.Hand
-                };
-                cell.Click += TargetCell_Click;
-                targetCells.Add(cell);
-                targetPanel.Controls.Add(cell);
-            }
-
-            Label lblSource = new Label
-            {
-                Text = "Фрагменты:",
-                Location = new Point(420, 55),
-                Size = new Size(200, 25)
-            };
-            Controls.Add(lblSource);
-
-            Panel sourcePanel = new Panel
-            {
-                Location = new Point(385, 80),
-                Size = new Size(250, 240),
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            Controls.Add(sourcePanel);
-
-            List<int> order = new List<int> { 0, 1, 2, 3 };
-            Shuffle(order);
+            Controls.Add(panel);
 
             for (int i = 0; i < 4; i++)
             {
-                int pieceIndex = order[i];
-                PictureBox pieceBox = new PictureBox
+                PictureBox box = new PictureBox
                 {
-                    Location = new Point(10 + (i % 2) * 120, 10 + (i / 2) * 110),
-                    Size = new Size(100, 100),
+                    Location = new Point((i % 2) * 120, (i / 2) * 120),
+                    Size = new Size(120, 120),
                     BorderStyle = BorderStyle.FixedSingle,
-                    Image = pieces[pieceIndex],
                     SizeMode = PictureBoxSizeMode.StretchImage,
-                    Tag = pieceIndex,
-                    Cursor = Cursors.Hand
+                    Cursor = Cursors.Hand,
+                    Tag = i
                 };
-                pieceBox.Click += SourcePiece_Click;
-                sourcePieces.Add(pieceBox);
-                sourcePanel.Controls.Add(pieceBox);
+
+                int angle = RandomAngle();
+                angles[box] = angle;
+                box.Image = Rotate(parts[i], angle);
+                box.Click += Box_Click;
+                boxes.Add(box);
+                panel.Controls.Add(box);
             }
 
-            Button btnClear = new Button
-            {
-                Text = "Очистить",
-                Location = new Point(185, 350),
-                Width = 100
-            };
-            btnClear.Click += BtnClear_Click;
+            if (Solved()) MakeNotSolved();
 
-            Button btnOk = new Button
-            {
-                Text = "Проверить",
-                Location = new Point(305, 350),
-                Width = 110
-            };
+            Button btnRefresh = new Button { Text = "Обновить", Location = new Point(65, 350), Width = 100 };
+            btnRefresh.Click += BtnRefresh_Click;
+            Controls.Add(btnRefresh);
+
+            Button btnOk = new Button { Text = "Проверить", Location = new Point(175, 350), Width = 100 };
             btnOk.Click += BtnOk_Click;
+            Controls.Add(btnOk);
 
-            Button btnCancel = new Button
+            Controls.Add(new Button
             {
                 Text = "Отмена",
-                Location = new Point(435, 350),
-                Width = 100,
+                Location = new Point(285, 350),
+                Width = 80,
                 DialogResult = DialogResult.Cancel
-            };
-
-            Controls.Add(btnClear);
-            Controls.Add(btnOk);
-            Controls.Add(btnCancel);
+            });
         }
 
-        private Image LoadRandomImage()
+        private Image LoadImage()
         {
-            int imageNumber = random.Next(1, 5);
-            string imagePath = Path.Combine(Application.StartupPath, "Resources", "Captcha", imageNumber + ".png");
-
-            if (File.Exists(imagePath))
+            string path = Path.Combine(Application.StartupPath, "Resources", "Captcha", "1.png");
+            if (File.Exists(path))
             {
-                using (Image img = Image.FromFile(imagePath))
-                {
+                using (Image img = Image.FromFile(path))
                     return new Bitmap(img, new Size(240, 240));
-                }
             }
 
-            Bitmap fallback = new Bitmap(240, 240);
-            using (Graphics g = Graphics.FromImage(fallback))
+            Bitmap bmp = new Bitmap(240, 240);
+            using (Graphics g = Graphics.FromImage(bmp))
             {
                 g.Clear(Color.LightGray);
                 g.DrawString("CAPTCHA", new Font("Arial", 24, FontStyle.Bold), Brushes.Black, 35, 95);
             }
-            return fallback;
+            return bmp;
         }
 
         private Image[] SplitImage(Image image, int rows, int cols)
         {
             Image[] result = new Image[rows * cols];
-            int width = image.Width / cols;
-            int height = image.Height / rows;
+            int w = image.Width / cols;
+            int h = image.Height / rows;
 
             for (int row = 0; row < rows; row++)
             {
                 for (int col = 0; col < cols; col++)
                 {
-                    Bitmap piece = new Bitmap(width, height);
+                    Bitmap piece = new Bitmap(w, h);
                     using (Graphics g = Graphics.FromImage(piece))
                     {
-                        Rectangle dest = new Rectangle(0, 0, width, height);
-                        Rectangle src = new Rectangle(col * width, row * height, width, height);
-                        g.DrawImage(image, dest, src, GraphicsUnit.Pixel);
+                        g.DrawImage(image, new Rectangle(0, 0, w, h), new Rectangle(col * w, row * h, w, h), GraphicsUnit.Pixel);
                     }
                     result[row * cols + col] = piece;
                 }
             }
-
             return result;
         }
 
-        private void SourcePiece_Click(object sender, EventArgs e)
+        private void Box_Click(object sender, EventArgs e)
         {
-            if (selectedSourceBox != null)
-            {
-                selectedSourceBox.BackColor = SystemColors.Control;
-            }
+            PictureBox box = sender as PictureBox;
+            if (box == null) return;
 
-            selectedSourceBox = sender as PictureBox;
-            selectedPieceIndex = Convert.ToInt32(selectedSourceBox.Tag);
-            selectedSourceBox.BackColor = Color.LightBlue;
+            int index = Convert.ToInt32(box.Tag);
+            angles[box] = (angles[box] + 90) % 360;
+            box.Image = Rotate(parts[index], angles[box]);
         }
 
-        private void TargetCell_Click(object sender, EventArgs e)
+        private void BtnRefresh_Click(object sender, EventArgs e)
         {
-            if (selectedPieceIndex == -1)
+            foreach (PictureBox box in boxes)
             {
-                MessageBox.Show("Сначала выберите фрагмент картинки.");
-                return;
+                int index = Convert.ToInt32(box.Tag);
+                int angle = RandomAngle();
+                angles[box] = angle;
+                box.Image = Rotate(parts[index], angle);
             }
-
-            PictureBox targetCell = sender as PictureBox;
-
-            targetCell.Image = pieces[selectedPieceIndex];
-            placedPieces[targetCell] = selectedPieceIndex;
-
-            selectedPieceIndex = -1;
-            if (selectedSourceBox != null)
-            {
-                selectedSourceBox.BackColor = SystemColors.Control;
-                selectedSourceBox = null;
-            }
-        }
-
-        private void BtnClear_Click(object sender, EventArgs e)
-        {
-            foreach (PictureBox cell in targetCells)
-            {
-                cell.Image = null;
-            }
-
-            placedPieces.Clear();
-            selectedPieceIndex = -1;
-
-            if (selectedSourceBox != null)
-            {
-                selectedSourceBox.BackColor = SystemColors.Control;
-                selectedSourceBox = null;
-            }
+            if (Solved()) MakeNotSolved();
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (placedPieces.Count < 4)
+            if (!Solved())
             {
-                MessageBox.Show("Соберите картинку полностью.");
+                MessageBox.Show("Картинка собрана неверно.");
                 return;
             }
-
-            foreach (PictureBox cell in targetCells)
-            {
-                int correctIndex = Convert.ToInt32(cell.Tag);
-                if (!placedPieces.ContainsKey(cell) || placedPieces[cell] != correctIndex)
-                {
-                    MessageBox.Show("Картинка собрана неверно.");
-                    return;
-                }
-            }
-
             DialogResult = DialogResult.OK;
             Close();
         }
 
-        private void Shuffle(List<int> list)
+        private bool Solved()
         {
-            for (int i = list.Count - 1; i > 0; i--)
-            {
-                int j = random.Next(i + 1);
-                int temp = list[i];
-                list[i] = list[j];
-                list[j] = temp;
-            }
+            foreach (int angle in angles.Values)
+                if (angle != 0) return false;
+            return true;
+        }
+
+        private int RandomAngle()
+        {
+            int[] values = { 0, 90, 180, 270 };
+            return values[random.Next(values.Length)];
+        }
+
+        private void MakeNotSolved()
+        {
+            if (boxes.Count == 0) return;
+            PictureBox first = boxes[0];
+            angles[first] = 90;
+            first.Image = Rotate(parts[0], 90);
+        }
+
+        private Image Rotate(Image image, int angle)
+        {
+            Bitmap bmp = new Bitmap(image);
+            if (angle == 90) bmp.RotateFlip(RotateFlipType.Rotate90FlipNone);
+            else if (angle == 180) bmp.RotateFlip(RotateFlipType.Rotate180FlipNone);
+            else if (angle == 270) bmp.RotateFlip(RotateFlipType.Rotate270FlipNone);
+            return bmp;
         }
     }
 }
