@@ -59,16 +59,10 @@ namespace ProductionProject
             string login = txtLogin.Text.Trim();
             string password = txtPassword.Text.Trim();
 
-            if (failedAttempts >= 2)
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
             {
-                using (CaptchaForm captcha = new CaptchaForm())
-                {
-                    if (captcha.ShowDialog() != DialogResult.OK)
-                    {
-                        lblMessage.Text = "Капча пройдена неверно.";
-                        return;
-                    }
-                }
+                lblMessage.Text = "Введите логин и пароль.";
+                return;
             }
 
             using (SqlConnection connection = new SqlConnection(connectionString))
@@ -97,19 +91,15 @@ namespace ProductionProject
                             if (userIdByLogin.HasValue)
                                 IncreaseFailedAttempts(connection, userIdByLogin.Value);
 
-                            if (failedAttempts == 1)
-                                lblMessage.Text = "Неверный логин или пароль. Осталось 2 попытки.";
-                            else if (failedAttempts == 2)
-                                lblMessage.Text = "Неверный логин или пароль. При следующей попытке появится капча.";
-                            else
-                                lblMessage.Text = "Пользователь заблокирован после 3 ошибок. Обратитесь к администратору.";
-
+                            lblMessage.Text = failedAttempts >= 3
+                                ? "Вы заблокированы. Обратитесь к администратору"
+                                : "Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные";
                             return;
                         }
 
                         if ((bool)reader["is_blocked"])
                         {
-                            lblMessage.Text = "Пользователь заблокирован.";
+                            lblMessage.Text = "Вы заблокированы. Обратитесь к администратору";
                             return;
                         }
 
@@ -122,9 +112,23 @@ namespace ProductionProject
                     }
                 }
 
+                using (CaptchaForm captcha = new CaptchaForm())
+                {
+                    if (captcha.ShowDialog() != DialogResult.OK)
+                    {
+                        IncreaseFailedAttempts(connection, currentUser.Id);
+                        lblMessage.Text = IsUserBlocked(connection, currentUser.Id)
+                            ? "Вы заблокированы. Обратитесь к администратору"
+                            : "Капча пройдена неверно.";
+                        currentUser = null;
+                        return;
+                    }
+                }
+
                 ResetFailedAttempts(connection, currentUser.Id);
             }
 
+            MessageBox.Show("Вы успешно авторизовались");
             BuildMainForm();
         }
 
@@ -149,6 +153,16 @@ namespace ProductionProject
             {
                 command.Parameters.AddWithValue("@id", userId);
                 command.ExecuteNonQuery();
+            }
+        }
+
+        private bool IsUserBlocked(SqlConnection connection, int userId)
+        {
+            using (SqlCommand command = new SqlCommand("SELECT is_blocked FROM Users WHERE id = @id", connection))
+            {
+                command.Parameters.AddWithValue("@id", userId);
+                object result = command.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
             }
         }
 
