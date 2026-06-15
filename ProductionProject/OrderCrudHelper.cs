@@ -15,27 +15,7 @@ namespace ProductionProject
                 JOIN Counterparties c ON co.customer_id = c.id
                 ORDER BY co.order_date DESC, co.id DESC";
 
-            TabPage page = new TabPage("Заказы");
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = CreatePanel(canEdit);
-
-            if (canEdit)
-            {
-                Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-                Button btnEdit = new Button { Text = "Изменить", Width = 100 };
-                Button btnDelete = new Button { Text = "Удалить", Width = 100 };
-                btnAdd.Click += (s, e) => AddOrder(connectionString, grid, query);
-                btnEdit.Click += (s, e) => EditOrder(connectionString, grid, query);
-                btnDelete.Click += (s, e) => DeleteOrder(connectionString, grid, query);
-                panel.Controls.Add(btnAdd);
-                panel.Controls.Add(btnEdit);
-                panel.Controls.Add(btnDelete);
-            }
-
-            page.Controls.Add(grid);
-            page.Controls.Add(panel);
-            LoadGrid(connectionString, grid, query);
-            return page;
+            return CreateOrderTab(connectionString, canEdit, "Заказы", "Заказы покупателей", "Работа с заказами клиентов", query, AddOrder, EditOrder, DeleteOrder);
         }
 
         public static TabPage CreateOrderItemsTab(string connectionString, bool canEdit)
@@ -49,55 +29,49 @@ namespace ProductionProject
                 JOIN Products p ON coi.product_id = p.id
                 ORDER BY co.order_date DESC, coi.id DESC";
 
-            TabPage page = new TabPage("Позиции заказов");
-            DataGridView grid = CreateGrid();
-            FlowLayoutPanel panel = CreatePanel(canEdit);
+            return CreateOrderTab(connectionString, canEdit, "Позиции заказов", "Позиции заказов", "Продукция и количество по заказам", query, AddOrderItem, EditOrderItem, DeleteOrderItem);
+        }
+
+        private static TabPage CreateOrderTab(string connectionString, bool canEdit, string tabTitle, string header, string subtitle, string query,
+            Action<string, DataGridView, BindingSource, string> addAction,
+            Action<string, DataGridView, BindingSource, string> editAction,
+            Action<string, DataGridView, BindingSource, string> deleteAction)
+        {
+            TabPage page = new TabPage(tabTitle) { BackColor = UiHelper.LightBackground };
+            BindingSource source = new BindingSource();
+            DataGridView grid = UiHelper.CreateGrid();
+            grid.DataBindingComplete += (s, e) => HideServiceColumns(grid);
+            FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
 
             if (canEdit)
             {
-                Button btnAdd = new Button { Text = "Добавить", Width = 100 };
-                Button btnEdit = new Button { Text = "Изменить", Width = 100 };
-                Button btnDelete = new Button { Text = "Удалить", Width = 100 };
-                btnAdd.Click += (s, e) => AddOrderItem(connectionString, grid, query);
-                btnEdit.Click += (s, e) => EditOrderItem(connectionString, grid, query);
-                btnDelete.Click += (s, e) => DeleteOrderItem(connectionString, grid, query);
-                panel.Controls.Add(btnAdd);
-                panel.Controls.Add(btnEdit);
-                panel.Controls.Add(btnDelete);
+                Button btnAdd = UiHelper.CreateButton("Добавить", 100);
+                Button btnEdit = UiHelper.CreateButton("Изменить", 100);
+                Button btnDelete = UiHelper.CreateButton("Удалить", 100);
+                btnAdd.Click += (s, e) => addAction(connectionString, grid, source, query);
+                btnEdit.Click += (s, e) => editAction(connectionString, grid, source, query);
+                btnDelete.Click += (s, e) => deleteAction(connectionString, grid, source, query);
+                toolbar.Controls.Add(btnAdd);
+                toolbar.Controls.Add(btnEdit);
+                toolbar.Controls.Add(btnDelete);
             }
 
-            page.Controls.Add(grid);
-            page.Controls.Add(panel);
-            LoadGrid(connectionString, grid, query);
+            Button btnRefresh = UiHelper.CreateButton("Обновить", 100);
+            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
+            toolbar.Controls.Add(btnRefresh);
+
+            Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
+            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
+            content.Controls.Add(tablePanel);
+            content.Controls.Add(toolbar);
+
+            page.Controls.Add(content);
+            page.Controls.Add(UiHelper.CreateTopPanel(header, subtitle));
+            LoadGrid(connectionString, grid, source, query);
             return page;
         }
 
-        private static FlowLayoutPanel CreatePanel(bool canEdit)
-        {
-            return new FlowLayoutPanel { Dock = DockStyle.Top, Height = canEdit ? 38 : 1 };
-        }
-
-        private static DataGridView CreateGrid()
-        {
-            DataGridView grid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                BackgroundColor = System.Drawing.Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
-            };
-
-            grid.DataBindingComplete += (s, e) => HideServiceColumns(grid);
-            return grid;
-        }
-
-        private static void LoadGrid(string connectionString, DataGridView grid, string query)
+        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             try
             {
@@ -106,7 +80,7 @@ namespace ProductionProject
                 {
                     DataTable table = new DataTable();
                     adapter.Fill(table);
-                    grid.DataSource = table;
+                    UiHelper.BindTable(grid, source, table);
                     HideServiceColumns(grid);
                 }
             }
@@ -143,7 +117,7 @@ namespace ProductionProject
             return Convert.ToInt32(grid.CurrentRow.Cells[columnName].Value);
         }
 
-        private static void AddOrder(string connectionString, DataGridView grid, string query)
+        private static void AddOrder(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             using (OrderEditForm form = new OrderEditForm(connectionString, "Добавление заказа"))
             {
@@ -156,11 +130,11 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void EditOrder(string connectionString, DataGridView grid, string query)
+        private static void EditOrder(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -179,7 +153,7 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
@@ -194,7 +168,7 @@ namespace ProductionProject
             }
         }
 
-        private static void DeleteOrder(string connectionString, DataGridView grid, string query)
+        private static void DeleteOrder(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -209,7 +183,7 @@ namespace ProductionProject
                     connection.Open();
                     command.ExecuteNonQuery();
                 }
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
             catch (Exception ex)
             {
@@ -217,17 +191,17 @@ namespace ProductionProject
             }
         }
 
-        private static void AddOrderItem(string connectionString, DataGridView grid, string query)
+        private static void AddOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             using (OrderItemEditForm form = new OrderItemEditForm(connectionString, "Добавление позиции заказа"))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
                 SaveOrderItem(connectionString, "INSERT INTO CustomerOrderItems (order_id, product_id, quantity) VALUES (@order, @product, @quantity)", form, 0);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void EditOrderItem(string connectionString, DataGridView grid, string query)
+        private static void EditOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -239,11 +213,11 @@ namespace ProductionProject
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
                 SaveOrderItem(connectionString, "UPDATE CustomerOrderItems SET order_id = @order, product_id = @product, quantity = @quantity WHERE id = @id", form, id);
-                LoadGrid(connectionString, grid, query);
+                LoadGrid(connectionString, grid, source, query);
             }
         }
 
-        private static void DeleteOrderItem(string connectionString, DataGridView grid, string query)
+        private static void DeleteOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
         {
             int id = GetSelectedId(grid);
             if (id == 0) return;
@@ -255,7 +229,7 @@ namespace ProductionProject
                 connection.Open();
                 command.ExecuteNonQuery();
             }
-            LoadGrid(connectionString, grid, query);
+            LoadGrid(connectionString, grid, source, query);
         }
 
         private static void SaveOrderItem(string connectionString, string sql, OrderItemEditForm form, int id)
