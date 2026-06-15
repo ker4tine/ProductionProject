@@ -137,6 +137,17 @@ namespace ProductionProject
         {
             source.DataSource = table;
             grid.DataSource = source;
+            HideColumn(grid, "ID");
+            HideColumn(grid, "OrderID");
+            HideColumn(grid, "ProductID");
+            HideColumn(grid, "MaterialID");
+            HideColumn(grid, "OperationID");
+        }
+
+        public static void HideColumn(DataGridView grid, string columnName)
+        {
+            if (grid.Columns.Contains(columnName))
+                grid.Columns[columnName].Visible = false;
         }
     }
 }
