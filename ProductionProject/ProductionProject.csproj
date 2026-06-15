@@ -49,10 +49,12 @@
     <Compile Include="CaptchaForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="CostTabHelper.cs" />
     <Compile Include="CrudHelper.cs" />
     <Compile Include="DictionaryEditForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="HomeTabHelper.cs" />
     <Compile Include="NoteCrudHelper.cs" />
     <Compile Include="NoteEditForm.cs">
       <SubType>Form</SubType>
@@ -73,6 +75,7 @@
     <Compile Include="UserEditForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="UserTabHelper.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
