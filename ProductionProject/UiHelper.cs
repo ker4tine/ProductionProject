@@ -55,10 +55,11 @@ namespace ProductionProject
             return new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 44,
+                Height = 52,
                 BackColor = Color.White,
                 Padding = new Padding(8, 7, 8, 6),
-                AutoScroll = false
+                AutoScroll = false,
+                WrapContents = true
             };
         }
 
