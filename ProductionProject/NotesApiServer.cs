@@ -28,7 +28,6 @@ namespace ProductionProject
         public void Start()
         {
             if (listener.IsListening) return;
-
             cancellationTokenSource = new CancellationTokenSource();
             listener.Start();
             serverTask = Task.Run(() => ListenLoop(cancellationTokenSource.Token));
@@ -38,15 +37,10 @@ namespace ProductionProject
         {
             try
             {
-                if (cancellationTokenSource != null)
-                    cancellationTokenSource.Cancel();
-
-                if (listener.IsListening)
-                    listener.Stop();
+                if (cancellationTokenSource != null) cancellationTokenSource.Cancel();
+                if (listener.IsListening) listener.Stop();
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         private async Task ListenLoop(CancellationToken token)
@@ -94,8 +88,7 @@ namespace ProductionProject
             }
             catch (Exception ex)
             {
-                string message = EscapeJson(ex.Message);
-                await WriteJson(context.Response, 500, "{\"error\":\"Ошибка сервера: " + message + "\"}");
+                await WriteJson(context.Response, 500, "{\"error\":\"Ошибка сервера: " + EscapeJson(ex.Message) + "\"}");
             }
         }
 
@@ -116,10 +109,10 @@ namespace ProductionProject
                         if (!first) json.Append(",");
                         first = false;
 
-                        int id = Convert.ToInt32(reader["id"]);
-                        string title = Convert.ToString(reader["title"]);
-                        string login = Convert.ToString(reader["login"]);
-                        string content = Convert.ToString(reader["content"]);
+                        int id = Convert.ToInt32(reader["note_id"]);
+                        string title = Convert.ToString(reader["note_title"]);
+                        string login = Convert.ToString(reader["user_login"]);
+                        string content = Convert.ToString(reader["note_content"]);
                         DateTime createdAt = Convert.ToDateTime(reader["created_at"]);
 
                         json.Append("{");
@@ -166,10 +159,10 @@ namespace ProductionProject
                     while (reader.Read())
                     {
                         hasRows = true;
-                        int id = Convert.ToInt32(reader["id"]);
-                        string title = Convert.ToString(reader["title"]);
-                        string login = Convert.ToString(reader["login"]);
-                        string content = Convert.ToString(reader["content"]);
+                        int id = Convert.ToInt32(reader["note_id"]);
+                        string title = Convert.ToString(reader["note_title"]);
+                        string login = Convert.ToString(reader["user_login"]);
+                        string content = Convert.ToString(reader["note_content"]);
                         DateTime createdAt = Convert.ToDateTime(reader["created_at"]);
 
                         html.Append("<tr>");
@@ -182,9 +175,7 @@ namespace ProductionProject
                 }
             }
 
-            if (!hasRows)
-                html.Append("<tr><td colspan='4' class='empty'>Заметок пока нет</td></tr>");
-
+            if (!hasRows) html.Append("<tr><td colspan='4' class='empty'>Заметок пока нет</td></tr>");
             html.Append("</tbody></table></div></main></body></html>");
             return html.ToString();
         }
@@ -192,10 +183,10 @@ namespace ProductionProject
         private string GetNotesSql()
         {
             return @"
-                SELECT n.id, n.title, n.content, n.created_at, u.login
-                FROM Notes n
-                JOIN Users u ON n.user_id = u.id
-                ORDER BY n.created_at DESC, n.id DESC";
+SELECT n.note_id, n.note_title, n.note_content, n.created_at, u.user_login
+FROM Notes n
+JOIN Users u ON n.user_id = u.user_id
+ORDER BY n.created_at DESC, n.note_id DESC";
         }
 
         private async Task WriteJson(HttpListenerResponse response, int statusCode, string json)
