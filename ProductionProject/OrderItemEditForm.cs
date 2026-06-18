@@ -49,51 +49,36 @@ namespace ProductionProject
             nudQuantity = new NumericUpDown { Location = new Point(140, 118), Width = 260, Minimum = 1, Maximum = 100000, DecimalPlaces = 2, Value = Quantity };
             Controls.Add(nudQuantity);
 
-            Button btnOk = new Button { Text = "Сохранить", Location = new Point(115, 180), Width = 100 };
-            btnOk.Click += BtnOk_Click;
-            Button btnCancel = new Button { Text = "Отмена", Location = new Point(230, 180), Width = 100, DialogResult = DialogResult.Cancel };
-            Controls.Add(btnOk);
-            Controls.Add(btnCancel);
+            Button ok = new Button { Text = "Сохранить", Location = new Point(115, 180), Width = 100 };
+            ok.Click += BtnOk_Click;
+            Controls.Add(ok);
+            Controls.Add(new Button { Text = "Отмена", Location = new Point(230, 180), Width = 100, DialogResult = DialogResult.Cancel });
         }
 
         private void LoadOrders()
         {
-            string sql = @"
-                SELECT co.id, c.name + N' от ' + CONVERT(nvarchar(10), co.order_date, 104) AS display_name
-                FROM CustomerOrders co
-                JOIN Counterparties c ON co.customer_id = c.id
-                ORDER BY co.order_date DESC, co.id DESC";
+            const string sql = "SELECT co.customer_order_id, c.counterparty_name + N' от ' + CONVERT(nvarchar(10), co.order_date, 104) AS display_name FROM CustomerOrders co JOIN Counterparties c ON co.customer_id = c.counterparty_id ORDER BY co.order_date DESC, co.customer_order_id DESC";
+            BindCombo(cmbOrder, sql, "display_name", "customer_order_id", OrderId);
+        }
+
+        private void LoadProducts()
+        {
+            const string sql = "SELECT product_id, product_name FROM Products ORDER BY product_name";
+            BindCombo(cmbProduct, sql, "product_name", "product_id", ProductId);
+        }
+
+        private void BindCombo(ComboBox combo, string sql, string displayMember, string valueMember, int selectedValue)
+        {
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlDataAdapter adapter = new SqlDataAdapter(sql, connection))
             {
                 DataTable table = new DataTable();
                 adapter.Fill(table);
-                cmbOrder.DisplayMember = "display_name";
-                cmbOrder.ValueMember = "id";
-                cmbOrder.DataSource = table;
-                if (OrderId > 0) cmbOrder.SelectedValue = OrderId;
+                combo.DisplayMember = displayMember;
+                combo.ValueMember = valueMember;
+                combo.DataSource = table;
+                if (selectedValue > 0) combo.SelectedValue = selectedValue;
             }
-        }
-
-        private void LoadProducts()
-        {
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT id, name FROM Products ORDER BY name", connection))
-            {
-                DataTable table = new DataTable();
-                adapter.Fill(table);
-                cmbProduct.DisplayMember = "name";
-                cmbProduct.ValueMember = "id";
-                cmbProduct.DataSource = table;
-                if (ProductId > 0) cmbProduct.SelectedValue = ProductId;
-            }
-        }
-
-        private int GetComboId(ComboBox combo)
-        {
-            if (combo.SelectedValue is DataRowView row)
-                return Convert.ToInt32(row["id"]);
-            return Convert.ToInt32(combo.SelectedValue);
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
@@ -104,8 +89,8 @@ namespace ProductionProject
                 return;
             }
 
-            OrderId = GetComboId(cmbOrder);
-            ProductId = GetComboId(cmbProduct);
+            OrderId = Convert.ToInt32(cmbOrder.SelectedValue);
+            ProductId = Convert.ToInt32(cmbProduct.SelectedValue);
             Quantity = nudQuantity.Value;
             DialogResult = DialogResult.OK;
             Close();
