@@ -7,35 +7,38 @@ namespace ProductionProject
 {
     public static class OrderCrudHelper
     {
-        public static TabPage CreateOrdersTab(string connectionString, bool canEdit)
-        {
-            string query = @"
-                SELECT co.id AS [ID], c.name AS [Заказчик], c.phone AS [Телефон], co.order_date AS [Дата заказа]
-                FROM CustomerOrders co
-                JOIN Counterparties c ON co.customer_id = c.id
-                ORDER BY co.order_date DESC, co.id DESC";
+        private const string OrdersQuery = @"
+SELECT co.customer_order_id AS [ID], c.counterparty_name AS [Заказчик],
+       c.phone AS [Телефон], co.order_date AS [Дата заказа]
+FROM CustomerOrders co
+JOIN Counterparties c ON co.customer_id = c.counterparty_id
+ORDER BY co.order_date DESC, co.customer_order_id DESC";
 
-            return CreateOrderTab(connectionString, canEdit, "Заказы", "Заказы покупателей", "Работа с заказами клиентов", query, AddOrder, EditOrder, DeleteOrder);
+        private const string ItemsQuery = @"
+SELECT coi.customer_order_item_id AS [ID], coi.customer_order_id AS [OrderID],
+       coi.product_id AS [ProductID], c.counterparty_name AS [Заказчик],
+       co.order_date AS [Дата заказа], p.product_name AS [Продукция],
+       coi.quantity AS [Количество], p.unit_name AS [Ед. изм.]
+FROM CustomerOrderItems coi
+JOIN CustomerOrders co ON coi.customer_order_id = co.customer_order_id
+JOIN Counterparties c ON co.customer_id = c.counterparty_id
+JOIN Products p ON coi.product_id = p.product_id
+ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
+
+        public static TabPage CreateOrdersTab(string cs, bool canEdit)
+        {
+            return CreateTab(cs, canEdit, "Заказы", "Заказы покупателей", "Работа с заказами клиентов", OrdersQuery, AddOrder, EditOrder, DeleteOrder);
         }
 
-        public static TabPage CreateOrderItemsTab(string connectionString, bool canEdit)
+        public static TabPage CreateOrderItemsTab(string cs, bool canEdit)
         {
-            string query = @"
-                SELECT coi.id AS [ID], coi.order_id AS [OrderID], coi.product_id AS [ProductID],
-                       c.name AS [Заказчик], co.order_date AS [Дата заказа], p.name AS [Продукция], coi.quantity AS [Количество], p.unit AS [Ед. изм.]
-                FROM CustomerOrderItems coi
-                JOIN CustomerOrders co ON coi.order_id = co.id
-                JOIN Counterparties c ON co.customer_id = c.id
-                JOIN Products p ON coi.product_id = p.id
-                ORDER BY co.order_date DESC, coi.id DESC";
-
-            return CreateOrderTab(connectionString, canEdit, "Позиции заказов", "Позиции заказов", "Продукция и количество по заказам", query, AddOrderItem, EditOrderItem, DeleteOrderItem);
+            return CreateTab(cs, canEdit, "Позиции заказов", "Позиции заказов", "Продукция и количество по заказам", ItemsQuery, AddOrderItem, EditOrderItem, DeleteOrderItem);
         }
 
-        private static TabPage CreateOrderTab(string connectionString, bool canEdit, string tabTitle, string header, string subtitle, string query,
-            Action<string, DataGridView, BindingSource, string> addAction,
-            Action<string, DataGridView, BindingSource, string> editAction,
-            Action<string, DataGridView, BindingSource, string> deleteAction)
+        private static TabPage CreateTab(string cs, bool canEdit, string tabTitle, string header, string subtitle, string query,
+            Action<string, DataGridView, BindingSource, string> add,
+            Action<string, DataGridView, BindingSource, string> edit,
+            Action<string, DataGridView, BindingSource, string> delete)
         {
             TabPage page = new TabPage(tabTitle) { BackColor = UiHelper.LightBackground };
             BindingSource source = new BindingSource();
@@ -45,38 +48,34 @@ namespace ProductionProject
 
             if (canEdit)
             {
-                Button btnAdd = UiHelper.CreateButton("Добавить", 100);
-                Button btnEdit = UiHelper.CreateButton("Изменить", 100);
-                Button btnDelete = UiHelper.CreateButton("Удалить", 100);
-                btnAdd.Click += (s, e) => addAction(connectionString, grid, source, query);
-                btnEdit.Click += (s, e) => editAction(connectionString, grid, source, query);
-                btnDelete.Click += (s, e) => deleteAction(connectionString, grid, source, query);
-                toolbar.Controls.Add(btnAdd);
-                toolbar.Controls.Add(btnEdit);
-                toolbar.Controls.Add(btnDelete);
+                Button b1 = UiHelper.CreateButton("Добавить", 100);
+                Button b2 = UiHelper.CreateButton("Изменить", 100);
+                Button b3 = UiHelper.CreateButton("Удалить", 100);
+                b1.Click += (s, e) => add(cs, grid, source, query);
+                b2.Click += (s, e) => edit(cs, grid, source, query);
+                b3.Click += (s, e) => delete(cs, grid, source, query);
+                toolbar.Controls.Add(b1); toolbar.Controls.Add(b2); toolbar.Controls.Add(b3);
             }
 
-            Button btnRefresh = UiHelper.CreateButton("Обновить", 100);
-            btnRefresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
-            toolbar.Controls.Add(btnRefresh);
+            Button refresh = UiHelper.CreateButton("Обновить", 100);
+            refresh.Click += (s, e) => LoadGrid(cs, grid, source, query);
+            toolbar.Controls.Add(refresh);
             UiHelper.AddStartsWithSearch(toolbar, source, "Заказчик", "Поиск по заказчику:");
 
-            Panel tablePanel = UiHelper.CreateTablePanel(grid, source);
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
-            content.Controls.Add(tablePanel);
+            content.Controls.Add(UiHelper.CreateTablePanel(grid, source));
             content.Controls.Add(toolbar);
-
             page.Controls.Add(content);
             page.Controls.Add(UiHelper.CreateTopPanel(header, subtitle));
-            LoadGrid(connectionString, grid, source, query);
+            LoadGrid(cs, grid, source, query);
             return page;
         }
 
-        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void LoadGrid(string cs, DataGridView grid, BindingSource source, string query)
         {
             try
             {
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                using (SqlConnection connection = new SqlConnection(cs))
                 using (SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
                 {
                     DataTable table = new DataTable();
@@ -85,165 +84,122 @@ namespace ProductionProject
                     HideServiceColumns(grid);
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Ошибка загрузки данных: " + ex.Message); }
         }
 
         private static void HideServiceColumns(DataGridView grid)
         {
-            HideColumn(grid, "ID");
-            HideColumn(grid, "OrderID");
-            HideColumn(grid, "ProductID");
+            foreach (string name in new[] { "ID", "OrderID", "ProductID" })
+                if (grid.Columns.Contains(name)) grid.Columns[name].Visible = false;
         }
 
-        private static void HideColumn(DataGridView grid, string name)
+        private static int SelectedId(DataGridView grid)
         {
-            if (grid.Columns.Contains(name)) grid.Columns[name].Visible = false;
-        }
-
-        private static int GetSelectedId(DataGridView grid)
-        {
-            if (grid.CurrentRow == null)
-            {
-                MessageBox.Show("Выберите строку.");
-                return 0;
-            }
+            if (grid.CurrentRow == null) { MessageBox.Show("Выберите строку."); return 0; }
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
-        private static int GetHiddenInt(DataGridView grid, string columnName)
+        private static int HiddenInt(DataGridView grid, string name)
         {
-            return Convert.ToInt32(grid.CurrentRow.Cells[columnName].Value);
+            return Convert.ToInt32(grid.CurrentRow.Cells[name].Value);
         }
 
-        private static void AddOrder(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void AddOrder(string cs, DataGridView grid, BindingSource source, string query)
         {
-            using (OrderEditForm form = new OrderEditForm(connectionString, "Добавление заказа"))
+            using (OrderEditForm form = new OrderEditForm(cs, "Добавление заказа"))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlCommand command = new SqlCommand("INSERT INTO CustomerOrders (customer_id, order_date) VALUES (@customer, @date)", connection))
-                {
-                    command.Parameters.AddWithValue("@customer", form.CustomerId);
-                    command.Parameters.AddWithValue("@date", form.OrderDate);
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-                LoadGrid(connectionString, grid, source, query);
+                Execute(cs, "INSERT INTO CustomerOrders (customer_id, order_date) VALUES (@customer,@date)",
+                    c => { c.Parameters.AddWithValue("@customer", form.CustomerId); c.Parameters.AddWithValue("@date", form.OrderDate); });
+                LoadGrid(cs, grid, source, query);
             }
         }
 
-        private static void EditOrder(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void EditOrder(string cs, DataGridView grid, BindingSource source, string query)
         {
-            int id = GetSelectedId(grid);
-            if (id == 0) return;
-            object customerId = GetCustomerId(connectionString, id);
-            DateTime orderDate = Convert.ToDateTime(grid.CurrentRow.Cells["Дата заказа"].Value);
-
-            using (OrderEditForm form = new OrderEditForm(connectionString, "Изменение заказа", customerId, orderDate))
+            int id = SelectedId(grid); if (id == 0) return;
+            object customerId = Scalar(cs, "SELECT customer_id FROM CustomerOrders WHERE customer_order_id=@id", id);
+            DateTime date = Convert.ToDateTime(grid.CurrentRow.Cells["Дата заказа"].Value);
+            using (OrderEditForm form = new OrderEditForm(cs, "Изменение заказа", customerId, date))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlCommand command = new SqlCommand("UPDATE CustomerOrders SET customer_id = @customer, order_date = @date WHERE id = @id", connection))
-                {
-                    command.Parameters.AddWithValue("@customer", form.CustomerId);
-                    command.Parameters.AddWithValue("@date", form.OrderDate);
-                    command.Parameters.AddWithValue("@id", id);
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-                LoadGrid(connectionString, grid, source, query);
+                Execute(cs, "UPDATE CustomerOrders SET customer_id=@customer, order_date=@date WHERE customer_order_id=@id",
+                    c => { c.Parameters.AddWithValue("@customer", form.CustomerId); c.Parameters.AddWithValue("@date", form.OrderDate); c.Parameters.AddWithValue("@id", id); });
+                LoadGrid(cs, grid, source, query);
             }
         }
 
-        private static object GetCustomerId(string connectionString, int orderId)
+        private static void DeleteOrder(string cs, DataGridView grid, BindingSource source, string query)
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlCommand command = new SqlCommand("SELECT customer_id FROM CustomerOrders WHERE id = @id", connection))
-            {
-                command.Parameters.AddWithValue("@id", orderId);
-                connection.Open();
-                return command.ExecuteScalar();
-            }
-        }
-
-        private static void DeleteOrder(string connectionString, DataGridView grid, BindingSource source, string query)
-        {
-            int id = GetSelectedId(grid);
-            if (id == 0) return;
+            int id = SelectedId(grid); if (id == 0) return;
             if (MessageBox.Show("Удалить выбранный заказ?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlCommand command = new SqlCommand("DELETE FROM CustomerOrders WHERE id = @id", connection))
-                {
-                    command.Parameters.AddWithValue("@id", id);
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-                LoadGrid(connectionString, grid, source, query);
+                Execute(cs, "DELETE FROM CustomerOrders WHERE customer_order_id=@id", c => c.Parameters.AddWithValue("@id", id));
+                LoadGrid(cs, grid, source, query);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка удаления. Возможно, у заказа есть позиции. Сначала удалите позиции заказа.\n" + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Ошибка удаления. Возможно, у заказа есть позиции.\n" + ex.Message); }
         }
 
-        private static void AddOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void AddOrderItem(string cs, DataGridView grid, BindingSource source, string query)
         {
-            using (OrderItemEditForm form = new OrderItemEditForm(connectionString, "Добавление позиции заказа"))
+            using (OrderItemEditForm form = new OrderItemEditForm(cs, "Добавление позиции заказа"))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
-                SaveOrderItem(connectionString, "INSERT INTO CustomerOrderItems (order_id, product_id, quantity) VALUES (@order, @product, @quantity)", form, 0);
-                LoadGrid(connectionString, grid, source, query);
+                SaveItem(cs, "INSERT INTO CustomerOrderItems (customer_order_id, product_id, quantity) VALUES (@order,@product,@quantity)", form, 0);
+                LoadGrid(cs, grid, source, query);
             }
         }
 
-        private static void EditOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void EditOrderItem(string cs, DataGridView grid, BindingSource source, string query)
         {
-            int id = GetSelectedId(grid);
-            if (id == 0) return;
-            int orderId = GetHiddenInt(grid, "OrderID");
-            int productId = GetHiddenInt(grid, "ProductID");
+            int id = SelectedId(grid); if (id == 0) return;
+            int orderId = HiddenInt(grid, "OrderID");
+            int productId = HiddenInt(grid, "ProductID");
             decimal quantity = Convert.ToDecimal(grid.CurrentRow.Cells["Количество"].Value);
-
-            using (OrderItemEditForm form = new OrderItemEditForm(connectionString, "Изменение позиции заказа", orderId, productId, quantity))
+            using (OrderItemEditForm form = new OrderItemEditForm(cs, "Изменение позиции заказа", orderId, productId, quantity))
             {
                 if (form.ShowDialog() != DialogResult.OK) return;
-                SaveOrderItem(connectionString, "UPDATE CustomerOrderItems SET order_id = @order, product_id = @product, quantity = @quantity WHERE id = @id", form, id);
-                LoadGrid(connectionString, grid, source, query);
+                SaveItem(cs, "UPDATE CustomerOrderItems SET customer_order_id=@order, product_id=@product, quantity=@quantity WHERE customer_order_item_id=@id", form, id);
+                LoadGrid(cs, grid, source, query);
             }
         }
 
-        private static void DeleteOrderItem(string connectionString, DataGridView grid, BindingSource source, string query)
+        private static void DeleteOrderItem(string cs, DataGridView grid, BindingSource source, string query)
         {
-            int id = GetSelectedId(grid);
-            if (id == 0) return;
+            int id = SelectedId(grid); if (id == 0) return;
             if (MessageBox.Show("Удалить выбранную позицию заказа?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlCommand command = new SqlCommand("DELETE FROM CustomerOrderItems WHERE id = @id", connection))
-            {
-                command.Parameters.AddWithValue("@id", id);
-                connection.Open();
-                command.ExecuteNonQuery();
-            }
-            LoadGrid(connectionString, grid, source, query);
+            Execute(cs, "DELETE FROM CustomerOrderItems WHERE customer_order_item_id=@id", c => c.Parameters.AddWithValue("@id", id));
+            LoadGrid(cs, grid, source, query);
         }
 
-        private static void SaveOrderItem(string connectionString, string sql, OrderItemEditForm form, int id)
+        private static void SaveItem(string cs, string sql, OrderItemEditForm form, int id)
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            Execute(cs, sql, c =>
+            {
+                c.Parameters.AddWithValue("@order", form.OrderId);
+                c.Parameters.AddWithValue("@product", form.ProductId);
+                c.Parameters.AddWithValue("@quantity", form.Quantity);
+                if (id > 0) c.Parameters.AddWithValue("@id", id);
+            });
+        }
+
+        private static object Scalar(string cs, string sql, int id)
+        {
+            using (SqlConnection connection = new SqlConnection(cs))
             using (SqlCommand command = new SqlCommand(sql, connection))
             {
-                command.Parameters.AddWithValue("@order", form.OrderId);
-                command.Parameters.AddWithValue("@product", form.ProductId);
-                command.Parameters.AddWithValue("@quantity", form.Quantity);
-                if (id > 0) command.Parameters.AddWithValue("@id", id);
-                connection.Open();
-                command.ExecuteNonQuery();
+                command.Parameters.AddWithValue("@id", id);
+                connection.Open(); return command.ExecuteScalar();
+            }
+        }
+
+        private static void Execute(string cs, string sql, Action<SqlCommand> configure)
+        {
+            using (SqlConnection connection = new SqlConnection(cs))
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+                configure(command); connection.Open(); command.ExecuteNonQuery();
             }
         }
     }
