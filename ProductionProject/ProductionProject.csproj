@@ -9,146 +9,54 @@
     <RootNamespace>ProductionProject</RootNamespace>
     <AssemblyName>ProductionProject</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget><DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize><OutputPath>bin\Debug\</OutputPath><DefineConstants>DEBUG;TRACE</DefineConstants><WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget><DebugType>pdbonly</DebugType><Optimize>true</Optimize><OutputPath>bin\Release\</OutputPath><DefineConstants>TRACE</DefineConstants><WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
+    <Reference Include="System" /><Reference Include="System.Core" /><Reference Include="System.Configuration" /><Reference Include="System.Xml.Linq" /><Reference Include="System.Data.DataSetExtensions" /><Reference Include="Microsoft.CSharp" /><Reference Include="System.Data" /><Reference Include="System.Deployment" /><Reference Include="System.Drawing" /><Reference Include="System.Net.Http" /><Reference Include="System.Windows.Forms" /><Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CaptchaForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="CostTabHelper.cs" />
-    <Compile Include="CrudHelper.cs" />
-    <Compile Include="DictionaryEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="HomeTabHelper.cs" />
-    <Compile Include="NoteCrudHelper.cs" />
-    <Compile Include="NoteEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="NotesApiServer.cs" />
-    <Compile Include="OrderCrudHelper.cs" />
-    <Compile Include="OrderEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="OrderItemEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="CaptchaForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="CostTabHelper.cs" /><Compile Include="CrudHelper.cs" /><Compile Include="DbConnectionProvider.cs" />
+    <Compile Include="DictionaryEditForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="HomeTabHelper.cs" /><Compile Include="NoteCrudHelper.cs" />
+    <Compile Include="NoteEditForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="NotesApiServer.cs" /><Compile Include="OrderCrudHelper.cs" />
+    <Compile Include="OrderEditForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="OrderItemEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="SpecificationCrudHelper.cs" />
-    <Compile Include="SpecificationEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="SpecificationEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="UiHelper.cs" />
-    <Compile Include="UserEditForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="UserEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="UserTabHelper.cs" />
-    <Compile Include="Form1.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Form1.Designer.cs">
-      <DependentUpon>Form1.cs</DependentUpon>
-    </Compile>
-    <Compile Include="PracticeDBDataSet.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
-    </Compile>
-    <Compile Include="ProductionDBDataSet.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>ProductionDBDataSet.xsd</DependentUpon>
-    </Compile>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <None Include="PracticeDBDataSet.xsc">
-      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
-    </None>
-    <None Include="PracticeDBDataSet.xsd">
-      <Generator>MSDataSetGenerator</Generator>
-      <LastGenOutput>PracticeDBDataSet.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="PracticeDBDataSet.xss">
-      <DependentUpon>PracticeDBDataSet.xsd</DependentUpon>
-    </None>
-    <None Include="ProductionDBDataSet.xsc">
-      <DependentUpon>ProductionDBDataSet.xsd</DependentUpon>
-    </None>
-    <None Include="ProductionDBDataSet.xsd">
-      <Generator>MSDataSetGenerator</Generator>
-      <LastGenOutput>ProductionDBDataSet.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="ProductionDBDataSet.xss">
-      <DependentUpon>ProductionDBDataSet.xsd</DependentUpon>
-    </None>
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
+    <Compile Include="Form1.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="Form1.Designer.cs"><DependentUpon>Form1.cs</DependentUpon></Compile>
+    <Compile Include="PracticeDBDataSet.Designer.cs"><AutoGen>True</AutoGen><DesignTime>True</DesignTime><DependentUpon>PracticeDBDataSet.xsd</DependentUpon></Compile>
+    <Compile Include="ProductionDBDataSet.Designer.cs"><AutoGen>True</AutoGen><DesignTime>True</DesignTime><DependentUpon>ProductionDBDataSet.xsd</DependentUpon></Compile>
+    <Compile Include="Program.cs" /><Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx"><Generator>ResXFileCodeGenerator</Generator><LastGenOutput>Resources.Designer.cs</LastGenOutput><SubType>Designer</SubType></EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs"><AutoGen>True</AutoGen><DependentUpon>Resources.resx</DependentUpon></Compile>
+    <Compile Include="Properties\Settings.Designer.cs"><AutoGen>True</AutoGen><DependentUpon>Settings.settings</DependentUpon><DesignTimeSharedInput>True</DesignTimeSharedInput></Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="PracticeDBDataSet.xsc"><DependentUpon>PracticeDBDataSet.xsd</DependentUpon></None>
+    <None Include="PracticeDBDataSet.xsd"><Generator>MSDataSetGenerator</Generator><LastGenOutput>PracticeDBDataSet.Designer.cs</LastGenOutput><SubType>Designer</SubType></None>
+    <None Include="PracticeDBDataSet.xss"><DependentUpon>PracticeDBDataSet.xsd</DependentUpon></None>
+    <None Include="ProductionDBDataSet.xsc"><DependentUpon>ProductionDBDataSet.xsd</DependentUpon></None>
+    <None Include="ProductionDBDataSet.xsd"><Generator>MSDataSetGenerator</Generator><LastGenOutput>ProductionDBDataSet.Designer.cs</LastGenOutput><SubType>Designer</SubType></None>
+    <None Include="ProductionDBDataSet.xss"><DependentUpon>ProductionDBDataSet.xsd</DependentUpon></None>
+    <None Include="Properties\Settings.settings"><Generator>SettingsSingleFileGenerator</Generator><LastGenOutput>Settings.Designer.cs</LastGenOutput></None>
     <None Include="App.config" />
-    <Content Include="Resources\Captcha\1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\Captcha\2.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\Captcha\3.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\Captcha\4.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="Resources\Captcha\1.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Resources\Captcha\2.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Resources\Captcha\3.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Resources\Captcha\4.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
