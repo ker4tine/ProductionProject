@@ -28,7 +28,7 @@ namespace ProductionProject
 
             txtLogin.Text = login;
             txtFullName.Text = fullName;
-            if (roleId > 0) cmbRole.SelectedValue = roleId;
+            SelectRole(roleId);
         }
 
         private void BuildForm()
@@ -91,6 +91,20 @@ namespace ProductionProject
             }
 
             if (cmbRole.Items.Count > 0) cmbRole.SelectedIndex = 0;
+        }
+
+        private void SelectRole(int roleId)
+        {
+            if (roleId <= 0) return;
+            for (int i = 0; i < cmbRole.Items.Count; i++)
+            {
+                RoleItem item = cmbRole.Items[i] as RoleItem;
+                if (item != null && item.Id == roleId)
+                {
+                    cmbRole.SelectedIndex = i;
+                    return;
+                }
+            }
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
