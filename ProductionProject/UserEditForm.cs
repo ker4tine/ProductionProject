@@ -1,4 +1,5 @@
 using System;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -6,6 +7,7 @@ namespace ProductionProject
 {
     public class UserEditForm : Form
     {
+        private readonly string connectionString;
         private TextBox txtLogin;
         private TextBox txtPassword;
         private TextBox txtFullName;
@@ -16,9 +18,11 @@ namespace ProductionProject
         public string FullName { get; private set; }
         public int RoleId { get; private set; }
 
-        public UserEditForm()
+        public UserEditForm(string connectionString)
         {
+            this.connectionString = connectionString;
             BuildForm();
+            LoadRoles();
         }
 
         private void BuildForm()
@@ -32,34 +36,42 @@ namespace ProductionProject
 
             Label lblLogin = new Label { Text = "Логин:", Location = new Point(30, 30), AutoSize = true };
             txtLogin = new TextBox { Location = new Point(140, 27), Width = 160 };
-
             Label lblPassword = new Label { Text = "Пароль:", Location = new Point(30, 65), AutoSize = true };
-            txtPassword = new TextBox { Location = new Point(140, 62), Width = 160 };
-
+            txtPassword = new TextBox { Location = new Point(140, 62), Width = 160, UseSystemPasswordChar = true };
             Label lblFullName = new Label { Text = "ФИО:", Location = new Point(30, 100), AutoSize = true };
             txtFullName = new TextBox { Location = new Point(140, 97), Width = 160 };
-
             Label lblRole = new Label { Text = "Роль:", Location = new Point(30, 135), AutoSize = true };
             cmbRole = new ComboBox { Location = new Point(140, 132), Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbRole.Items.Add(new RoleItem(1, "Администратор"));
-            cmbRole.Items.Add(new RoleItem(2, "Пользователь"));
-            cmbRole.SelectedIndex = 1;
 
             Button btnOk = new Button { Text = "Сохранить", Location = new Point(75, 185), Width = 100 };
             btnOk.Click += BtnOk_Click;
-
             Button btnCancel = new Button { Text = "Отмена", Location = new Point(190, 185), Width = 100, DialogResult = DialogResult.Cancel };
 
-            Controls.Add(lblLogin);
-            Controls.Add(txtLogin);
-            Controls.Add(lblPassword);
-            Controls.Add(txtPassword);
-            Controls.Add(lblFullName);
-            Controls.Add(txtFullName);
-            Controls.Add(lblRole);
-            Controls.Add(cmbRole);
-            Controls.Add(btnOk);
-            Controls.Add(btnCancel);
+            Controls.Add(lblLogin); Controls.Add(txtLogin);
+            Controls.Add(lblPassword); Controls.Add(txtPassword);
+            Controls.Add(lblFullName); Controls.Add(txtFullName);
+            Controls.Add(lblRole); Controls.Add(cmbRole);
+            Controls.Add(btnOk); Controls.Add(btnCancel);
+        }
+
+        private void LoadRoles()
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlCommand command = new SqlCommand("SELECT role_id, role_name FROM Roles ORDER BY role_name", connection))
+            {
+                connection.Open();
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        cmbRole.Items.Add(new RoleItem(
+                            Convert.ToInt32(reader["role_id"]),
+                            reader["role_name"].ToString()));
+                    }
+                }
+            }
+
+            if (cmbRole.Items.Count > 0) cmbRole.SelectedIndex = 0;
         }
 
         private void BtnOk_Click(object sender, EventArgs e)
@@ -71,6 +83,12 @@ namespace ProductionProject
             }
 
             RoleItem role = cmbRole.SelectedItem as RoleItem;
+            if (role == null)
+            {
+                MessageBox.Show("Выберите роль.");
+                return;
+            }
+
             UserLogin = txtLogin.Text.Trim();
             UserPassword = txtPassword.Text.Trim();
             FullName = txtFullName.Text.Trim();

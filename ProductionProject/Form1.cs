@@ -7,7 +7,7 @@ namespace ProductionProject
 {
     public partial class Form1 : Form
     {
-        private readonly string connectionString = @"Data Source=WIN-BBJB9MMFFR1\SQLEXPRESS;Initial Catalog=PracticeDB;Integrated Security=True;TrustServerCertificate=True";
+        private readonly string connectionString = DbConnectionProvider.ConnectionString;
 
         private TextBox txtLogin;
         private TextBox txtPassword;
@@ -128,67 +128,76 @@ namespace ProductionProject
                 return;
             }
 
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            try
             {
-                connection.Open();
-                int? userIdByLogin = GetUserIdByLogin(connection, login);
-
-                string sql = @"
-                    SELECT u.id, u.login, r.name AS role_name, u.is_blocked
-                    FROM Users u
-                    JOIN Roles r ON u.role_id = r.id
-                    WHERE u.login = @login AND u.password_hash = @password";
-
-                using (SqlCommand command = new SqlCommand(sql, connection))
+                using (SqlConnection connection = new SqlConnection(connectionString))
                 {
-                    command.Parameters.AddWithValue("@login", login);
-                    command.Parameters.AddWithValue("@password", password);
+                    connection.Open();
+                    int? userIdByLogin = GetUserIdByLogin(connection, login);
 
-                    using (SqlDataReader reader = command.ExecuteReader())
+                    string sql = @"
+                        SELECT u.user_id, u.user_login, r.role_name, u.is_blocked
+                        FROM Users u
+                        JOIN Roles r ON u.role_id = r.role_id
+                        WHERE u.user_login = @login
+                          AND u.password_hash = @password";
+
+                    using (SqlCommand command = new SqlCommand(sql, connection))
                     {
-                        if (!reader.Read())
+                        command.Parameters.AddWithValue("@login", login);
+                        command.Parameters.AddWithValue("@password", password);
+
+                        using (SqlDataReader reader = command.ExecuteReader())
                         {
-                            reader.Close();
-                            failedAttempts++;
+                            if (!reader.Read())
+                            {
+                                reader.Close();
+                                failedAttempts++;
 
-                            if (userIdByLogin.HasValue)
-                                IncreaseFailedAttempts(connection, userIdByLogin.Value);
+                                if (userIdByLogin.HasValue)
+                                    IncreaseFailedAttempts(connection, userIdByLogin.Value);
 
-                            lblMessage.Text = failedAttempts >= 3
+                                lblMessage.Text = failedAttempts >= 3
+                                    ? "Вы заблокированы. Обратитесь к администратору"
+                                    : "Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные";
+                                return;
+                            }
+
+                            if ((bool)reader["is_blocked"])
+                            {
+                                lblMessage.Text = "Вы заблокированы. Обратитесь к администратору";
+                                return;
+                            }
+
+                            currentUser = new CurrentUserData
+                            {
+                                Id = Convert.ToInt32(reader["user_id"]),
+                                Login = reader["user_login"].ToString(),
+                                Role = reader["role_name"].ToString()
+                            };
+                        }
+                    }
+
+                    using (CaptchaForm captcha = new CaptchaForm())
+                    {
+                        if (captcha.ShowDialog() != DialogResult.OK)
+                        {
+                            IncreaseFailedAttempts(connection, currentUser.Id);
+                            lblMessage.Text = IsUserBlocked(connection, currentUser.Id)
                                 ? "Вы заблокированы. Обратитесь к администратору"
-                                : "Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные";
+                                : "Капча пройдена неверно.";
+                            currentUser = null;
                             return;
                         }
-
-                        if ((bool)reader["is_blocked"])
-                        {
-                            lblMessage.Text = "Вы заблокированы. Обратитесь к администратору";
-                            return;
-                        }
-
-                        currentUser = new CurrentUserData
-                        {
-                            Id = Convert.ToInt32(reader["id"]),
-                            Login = reader["login"].ToString(),
-                            Role = reader["role_name"].ToString()
-                        };
                     }
-                }
 
-                using (CaptchaForm captcha = new CaptchaForm())
-                {
-                    if (captcha.ShowDialog() != DialogResult.OK)
-                    {
-                        IncreaseFailedAttempts(connection, currentUser.Id);
-                        lblMessage.Text = IsUserBlocked(connection, currentUser.Id)
-                            ? "Вы заблокированы. Обратитесь к администратору"
-                            : "Капча пройдена неверно.";
-                        currentUser = null;
-                        return;
-                    }
+                    ResetFailedAttempts(connection, currentUser.Id);
                 }
-
-                ResetFailedAttempts(connection, currentUser.Id);
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "Ошибка подключения к базе данных: " + ex.Message;
+                return;
             }
 
             MessageBox.Show("Вы успешно авторизовались");
@@ -197,7 +206,8 @@ namespace ProductionProject
 
         private int? GetUserIdByLogin(SqlConnection connection, string login)
         {
-            using (SqlCommand command = new SqlCommand("SELECT id FROM Users WHERE login = @login", connection))
+            using (SqlCommand command = new SqlCommand(
+                "SELECT user_id FROM Users WHERE user_login = @login", connection))
             {
                 command.Parameters.AddWithValue("@login", login);
                 object result = command.ExecuteScalar();
@@ -210,20 +220,25 @@ namespace ProductionProject
             string sql = @"
                 UPDATE Users
                 SET failed_attempts = failed_attempts + 1,
-                    is_blocked = CASE WHEN failed_attempts + 1 >= 3 THEN 1 ELSE is_blocked END
-                WHERE id = @id";
+                    is_blocked = CASE
+                        WHEN failed_attempts + 1 >= 3 THEN 1
+                        ELSE is_blocked
+                    END
+                WHERE user_id = @userId";
+
             using (SqlCommand command = new SqlCommand(sql, connection))
             {
-                command.Parameters.AddWithValue("@id", userId);
+                command.Parameters.AddWithValue("@userId", userId);
                 command.ExecuteNonQuery();
             }
         }
 
         private bool IsUserBlocked(SqlConnection connection, int userId)
         {
-            using (SqlCommand command = new SqlCommand("SELECT is_blocked FROM Users WHERE id = @id", connection))
+            using (SqlCommand command = new SqlCommand(
+                "SELECT is_blocked FROM Users WHERE user_id = @userId", connection))
             {
-                command.Parameters.AddWithValue("@id", userId);
+                command.Parameters.AddWithValue("@userId", userId);
                 object result = command.ExecuteScalar();
                 return result != null && Convert.ToBoolean(result);
             }
@@ -231,9 +246,10 @@ namespace ProductionProject
 
         private void ResetFailedAttempts(SqlConnection connection, int userId)
         {
-            using (SqlCommand command = new SqlCommand("UPDATE Users SET failed_attempts = 0 WHERE id = @id", connection))
+            using (SqlCommand command = new SqlCommand(
+                "UPDATE Users SET failed_attempts = 0 WHERE user_id = @userId", connection))
             {
-                command.Parameters.AddWithValue("@id", userId);
+                command.Parameters.AddWithValue("@userId", userId);
                 command.ExecuteNonQuery();
             }
         }
