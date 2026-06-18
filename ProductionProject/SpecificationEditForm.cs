@@ -27,7 +27,7 @@ namespace ProductionProject
             Quantity = quantity <= 0 ? 1 : quantity;
             BuildForm(title);
             LoadProducts();
-            LoadItemTypes();
+            LoadTypes();
         }
 
         private void BuildForm(string title)
@@ -56,28 +56,24 @@ namespace ProductionProject
             nudQuantity = new NumericUpDown { Location = new Point(150, 161), Width = 250, Minimum = 1, Maximum = 100000, DecimalPlaces = 2, Value = Quantity };
             Controls.Add(nudQuantity);
 
-            Button btnOk = new Button { Text = "Сохранить", Location = new Point(115, 220), Width = 100 };
-            btnOk.Click += BtnOk_Click;
-            Button btnCancel = new Button { Text = "Отмена", Location = new Point(230, 220), Width = 100, DialogResult = DialogResult.Cancel };
-            Controls.Add(btnOk);
-            Controls.Add(btnCancel);
+            Button ok = new Button { Text = "Сохранить", Location = new Point(115, 220), Width = 100 };
+            ok.Click += BtnOk_Click;
+            Controls.Add(ok);
+            Controls.Add(new Button { Text = "Отмена", Location = new Point(230, 220), Width = 100, DialogResult = DialogResult.Cancel });
         }
 
         private void LoadProducts()
         {
-            LoadCombo(cmbProduct, "SELECT id, name FROM Products ORDER BY name", ProductId);
+            LoadCombo(cmbProduct,
+                "SELECT product_id AS item_id, product_name AS item_name FROM Products ORDER BY product_name",
+                ProductId);
         }
 
-        private void LoadItemTypes()
+        private void LoadTypes()
         {
-            cmbType.Items.Clear();
             cmbType.Items.Add("Материал");
             cmbType.Items.Add("Операция");
-
-            if (OperationId != null && OperationId.ToString() != "")
-                cmbType.SelectedIndex = 1;
-            else
-                cmbType.SelectedIndex = 0;
+            cmbType.SelectedIndex = OperationId != null && OperationId.ToString() != "" ? 1 : 0;
         }
 
         private void LoadItems()
@@ -85,9 +81,13 @@ namespace ProductionProject
             if (cmbType.SelectedItem == null) return;
 
             if (cmbType.SelectedItem.ToString() == "Материал")
-                LoadCombo(cmbItem, "SELECT id, name FROM Materials ORDER BY name", MaterialId);
+                LoadCombo(cmbItem,
+                    "SELECT material_id AS item_id, material_name AS item_name FROM Materials ORDER BY material_name",
+                    MaterialId);
             else
-                LoadCombo(cmbItem, "SELECT id, name FROM Operations ORDER BY name", OperationId);
+                LoadCombo(cmbItem,
+                    "SELECT operation_id AS item_id, operation_name AS item_name FROM Operations ORDER BY operation_name",
+                    OperationId);
         }
 
         private void LoadCombo(ComboBox combo, string sql, object selectedId)
@@ -101,7 +101,7 @@ namespace ProductionProject
                 {
                     while (reader.Read())
                     {
-                        ComboItem item = new ComboItem(reader["id"], reader["name"].ToString());
+                        ComboItem item = new ComboItem(reader["item_id"], reader["item_name"].ToString());
                         combo.Items.Add(item);
                         if (selectedId != null && item.Id.ToString() == selectedId.ToString())
                             combo.SelectedItem = item;
@@ -145,7 +145,7 @@ namespace ProductionProject
         private class ComboItem
         {
             public object Id { get; private set; }
-            public string Name { get; private set; }
+            private string Name { get; set; }
 
             public ComboItem(object id, string name)
             {
