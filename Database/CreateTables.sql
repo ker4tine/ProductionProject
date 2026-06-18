@@ -124,24 +124,6 @@ CREATE TABLE CustomerOrderItems
 );
 GO
 
-CREATE TABLE ProductionOrders
-(
-    production_order_id INT IDENTITY(1,1) PRIMARY KEY,
-    customer_order_id INT NULL,
-    product_id INT NOT NULL,
-    quantity FLOAT NOT NULL,
-    production_date DATE NOT NULL,
-
-    FOREIGN KEY (customer_order_id)
-        REFERENCES CustomerOrders(customer_order_id),
-
-    FOREIGN KEY (product_id)
-        REFERENCES Products(product_id),
-
-    CHECK (quantity > 0)
-);
-GO
-
 CREATE TABLE Notes
 (
     note_id INT IDENTITY(1,1) PRIMARY KEY,

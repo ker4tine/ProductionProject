@@ -30,9 +30,6 @@ GROUP BY c.counterparty_name, p.product_name, coi.quantity";
             DataGridView grid = UiHelper.CreateGrid();
             FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
 
-            Button refresh = UiHelper.CreateButton("Обновить", 100);
-            refresh.Click += (s, e) => LoadGrid(connectionString, grid, source);
-            toolbar.Controls.Add(refresh);
             UiHelper.AddStartsWithSearch(toolbar, source, "Заказчик", "Поиск по заказчику:");
 
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
@@ -58,7 +55,7 @@ GROUP BY c.counterparty_name, p.product_name, coi.quantity";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка загрузки расчета стоимости: " + ex.Message);
+                MessageBox.Show("Ошибка загрузки расчета стоимости: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

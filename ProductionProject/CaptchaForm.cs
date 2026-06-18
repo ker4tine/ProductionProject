@@ -11,10 +11,14 @@ namespace ProductionProject
         private readonly Random random = new Random();
         private readonly List<PictureBox> boxes = new List<PictureBox>();
         private readonly Dictionary<PictureBox, int> angles = new Dictionary<PictureBox, int>();
+        private readonly int maxAttempts;
         private Image[] parts;
 
-        public CaptchaForm()
+        public int FailedAttempts { get; private set; }
+
+        public CaptchaForm(int maxAttempts = 3)
         {
+            this.maxAttempts = Math.Max(1, maxAttempts);
             BuildForm();
         }
 
@@ -147,13 +151,32 @@ namespace ProductionProject
 
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (!Solved())
+            if (Solved())
             {
-                MessageBox.Show("Картинка собрана неверно.");
+                DialogResult = DialogResult.OK;
+                Close();
                 return;
             }
-            DialogResult = DialogResult.OK;
-            Close();
+
+            FailedAttempts++;
+            int attemptsLeft = maxAttempts - FailedAttempts;
+            if (attemptsLeft <= 0)
+            {
+                MessageBox.Show(
+                    "Превышено допустимое число ошибок. Учетная запись будет заблокирована.",
+                    "Проверка не пройдена",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                DialogResult = DialogResult.Abort;
+                Close();
+                return;
+            }
+
+            MessageBox.Show(
+                "Картинка собрана неверно. Осталось попыток: " + attemptsLeft + ".",
+                "Проверка не пройдена",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
         }
 
         private bool Solved()

@@ -8,6 +8,7 @@ namespace ProductionProject
     public class UserEditForm : Form
     {
         private readonly string connectionString;
+        private readonly bool editing;
         private TextBox txtLogin;
         private TextBox txtPassword;
         private TextBox txtFullName;
@@ -18,40 +19,58 @@ namespace ProductionProject
         public string FullName { get; private set; }
         public int RoleId { get; private set; }
 
-        public UserEditForm(string connectionString)
+        public UserEditForm(string connectionString, string login = "", string fullName = "", int roleId = 0)
         {
             this.connectionString = connectionString;
+            editing = !string.IsNullOrWhiteSpace(login);
             BuildForm();
             LoadRoles();
+
+            txtLogin.Text = login;
+            txtFullName.Text = fullName;
+            SelectRole(roleId);
         }
 
         private void BuildForm()
         {
-            Text = "Добавление пользователя";
+            Text = editing ? "Изменение пользователя" : "Добавление пользователя";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(360, 280);
+            Size = new Size(380, 300);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
 
-            Label lblLogin = new Label { Text = "Логин:", Location = new Point(30, 30), AutoSize = true };
-            txtLogin = new TextBox { Location = new Point(140, 27), Width = 160 };
-            Label lblPassword = new Label { Text = "Пароль:", Location = new Point(30, 65), AutoSize = true };
-            txtPassword = new TextBox { Location = new Point(140, 62), Width = 160, UseSystemPasswordChar = true };
-            Label lblFullName = new Label { Text = "ФИО:", Location = new Point(30, 100), AutoSize = true };
-            txtFullName = new TextBox { Location = new Point(140, 97), Width = 160 };
-            Label lblRole = new Label { Text = "Роль:", Location = new Point(30, 135), AutoSize = true };
-            cmbRole = new ComboBox { Location = new Point(140, 132), Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
+            Controls.Add(new Label { Text = "Логин:", Location = new Point(30, 30), AutoSize = true });
+            txtLogin = new TextBox { Location = new Point(150, 27), Width = 180 };
+            Controls.Add(txtLogin);
 
-            Button btnOk = new Button { Text = "Сохранить", Location = new Point(75, 185), Width = 100 };
+            Controls.Add(new Label { Text = editing ? "Новый пароль:" : "Пароль:", Location = new Point(30, 65), AutoSize = true });
+            txtPassword = new TextBox { Location = new Point(150, 62), Width = 180, UseSystemPasswordChar = true };
+            Controls.Add(txtPassword);
+
+            Controls.Add(new Label { Text = "ФИО:", Location = new Point(30, 100), AutoSize = true });
+            txtFullName = new TextBox { Location = new Point(150, 97), Width = 180 };
+            Controls.Add(txtFullName);
+
+            Controls.Add(new Label { Text = "Роль:", Location = new Point(30, 135), AutoSize = true });
+            cmbRole = new ComboBox { Location = new Point(150, 132), Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
+            Controls.Add(cmbRole);
+
+            if (editing)
+            {
+                Controls.Add(new Label
+                {
+                    Text = "Оставьте пароль пустым, чтобы не менять его.",
+                    Location = new Point(30, 170),
+                    Size = new Size(300, 30),
+                    ForeColor = Color.DimGray
+                });
+            }
+
+            Button btnOk = new Button { Text = "Сохранить", Location = new Point(85, 215), Width = 100 };
             btnOk.Click += BtnOk_Click;
-            Button btnCancel = new Button { Text = "Отмена", Location = new Point(190, 185), Width = 100, DialogResult = DialogResult.Cancel };
-
-            Controls.Add(lblLogin); Controls.Add(txtLogin);
-            Controls.Add(lblPassword); Controls.Add(txtPassword);
-            Controls.Add(lblFullName); Controls.Add(txtFullName);
-            Controls.Add(lblRole); Controls.Add(cmbRole);
-            Controls.Add(btnOk); Controls.Add(btnCancel);
+            Controls.Add(btnOk);
+            Controls.Add(new Button { Text = "Отмена", Location = new Point(200, 215), Width = 100, DialogResult = DialogResult.Cancel });
         }
 
         private void LoadRoles()
@@ -74,23 +93,43 @@ namespace ProductionProject
             if (cmbRole.Items.Count > 0) cmbRole.SelectedIndex = 0;
         }
 
+        private void SelectRole(int roleId)
+        {
+            if (roleId <= 0) return;
+            for (int i = 0; i < cmbRole.Items.Count; i++)
+            {
+                RoleItem item = cmbRole.Items[i] as RoleItem;
+                if (item != null && item.Id == roleId)
+                {
+                    cmbRole.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtLogin.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
+            if (string.IsNullOrWhiteSpace(txtLogin.Text))
             {
-                MessageBox.Show("Введите логин и пароль.");
+                MessageBox.Show("Введите логин.", "Проверка данных", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!editing && string.IsNullOrWhiteSpace(txtPassword.Text))
+            {
+                MessageBox.Show("Введите пароль.", "Проверка данных", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             RoleItem role = cmbRole.SelectedItem as RoleItem;
             if (role == null)
             {
-                MessageBox.Show("Выберите роль.");
+                MessageBox.Show("Выберите роль.", "Проверка данных", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             UserLogin = txtLogin.Text.Trim();
-            UserPassword = txtPassword.Text.Trim();
+            UserPassword = txtPassword.Text;
             FullName = txtFullName.Text.Trim();
             RoleId = role.Id;
             DialogResult = DialogResult.OK;
