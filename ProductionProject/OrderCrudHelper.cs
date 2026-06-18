@@ -27,15 +27,15 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
 
         public static TabPage CreateOrdersTab(string cs, bool canEdit)
         {
-            return CreateTab(cs, canEdit, "Заказы", "Заказы покупателей", "Работа с заказами клиентов", OrdersQuery, AddOrder, EditOrder, DeleteOrder);
+            return CreateTab(cs, canEdit, true, "Заказы", "Заказы покупателей", "Работа с заказами клиентов", OrdersQuery, AddOrder, EditOrder, DeleteOrder);
         }
 
         public static TabPage CreateOrderItemsTab(string cs, bool canEdit)
         {
-            return CreateTab(cs, canEdit, "Позиции заказов", "Позиции заказов", "Продукция и количество по заказам", ItemsQuery, AddOrderItem, EditOrderItem, DeleteOrderItem);
+            return CreateTab(cs, canEdit, false, "Позиции заказов", "Позиции заказов", "Продукция и количество по заказам", ItemsQuery, AddOrderItem, EditOrderItem, DeleteOrderItem);
         }
 
-        private static TabPage CreateTab(string cs, bool canEdit, string tabTitle, string header, string subtitle, string query,
+        private static TabPage CreateTab(string cs, bool canEdit, bool showImport, string tabTitle, string header, string subtitle, string query,
             Action<string, DataGridView, BindingSource, string> add,
             Action<string, DataGridView, BindingSource, string> edit,
             Action<string, DataGridView, BindingSource, string> delete)
@@ -48,18 +48,24 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
 
             if (canEdit)
             {
-                Button b1 = UiHelper.CreateButton("Добавить", 100);
-                Button b2 = UiHelper.CreateButton("Изменить", 100);
-                Button b3 = UiHelper.CreateButton("Удалить", 100);
-                b1.Click += (s, e) => add(cs, grid, source, query);
-                b2.Click += (s, e) => edit(cs, grid, source, query);
-                b3.Click += (s, e) => delete(cs, grid, source, query);
-                toolbar.Controls.Add(b1); toolbar.Controls.Add(b2); toolbar.Controls.Add(b3);
+                Button addButton = UiHelper.CreateButton("Добавить", 100);
+                Button editButton = UiHelper.CreateButton("Изменить", 100);
+                Button deleteButton = UiHelper.CreateButton("Удалить", 100);
+                addButton.Click += (s, e) => add(cs, grid, source, query);
+                editButton.Click += (s, e) => edit(cs, grid, source, query);
+                deleteButton.Click += (s, e) => delete(cs, grid, source, query);
+                toolbar.Controls.Add(addButton);
+                toolbar.Controls.Add(editButton);
+                toolbar.Controls.Add(deleteButton);
             }
 
-            Button refresh = UiHelper.CreateButton("Обновить", 100);
-            refresh.Click += (s, e) => LoadGrid(cs, grid, source, query);
-            toolbar.Controls.Add(refresh);
+            if (showImport)
+            {
+                Button importButton = UiHelper.CreateButton("Импорт JSON", 130);
+                importButton.Click += (s, e) => CounterpartyImportHelper.ImportFromFile(cs);
+                toolbar.Controls.Add(importButton);
+            }
+
             UiHelper.AddStartsWithSearch(toolbar, source, "Заказчик", "Поиск по заказчику:");
 
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
@@ -84,7 +90,10 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
                     HideServiceColumns(grid);
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Ошибка загрузки данных: " + ex.Message); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка загрузки данных: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static void HideServiceColumns(DataGridView grid)
@@ -95,7 +104,11 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
 
         private static int SelectedId(DataGridView grid)
         {
-            if (grid.CurrentRow == null) { MessageBox.Show("Выберите строку."); return 0; }
+            if (grid.CurrentRow == null)
+            {
+                MessageBox.Show("Выберите строку.", "Данные не выбраны", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return 0;
+            }
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
@@ -132,13 +145,16 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
         private static void DeleteOrder(string cs, DataGridView grid, BindingSource source, string query)
         {
             int id = SelectedId(grid); if (id == 0) return;
-            if (MessageBox.Show("Удалить выбранный заказ?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (MessageBox.Show("Удалить выбранный заказ?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             try
             {
                 Execute(cs, "DELETE FROM CustomerOrders WHERE customer_order_id=@id", c => c.Parameters.AddWithValue("@id", id));
                 LoadGrid(cs, grid, source, query);
             }
-            catch (Exception ex) { MessageBox.Show("Ошибка удаления. Возможно, у заказа есть позиции.\n" + ex.Message); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Не удалось удалить заказ. Возможно, у него есть позиции.\n\n" + ex.Message, "Ошибка удаления", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static void AddOrderItem(string cs, DataGridView grid, BindingSource source, string query)
@@ -168,7 +184,7 @@ ORDER BY co.order_date DESC, coi.customer_order_item_id DESC";
         private static void DeleteOrderItem(string cs, DataGridView grid, BindingSource source, string query)
         {
             int id = SelectedId(grid); if (id == 0) return;
-            if (MessageBox.Show("Удалить выбранную позицию заказа?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (MessageBox.Show("Удалить выбранную позицию заказа?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             Execute(cs, "DELETE FROM CustomerOrderItems WHERE customer_order_item_id=@id", c => c.Parameters.AddWithValue("@id", id));
             LoadGrid(cs, grid, source, query);
         }
