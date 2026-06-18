@@ -49,16 +49,16 @@ namespace ProductionProject
 
         private void LoadCustomers()
         {
+            const string sql = "SELECT counterparty_id, counterparty_name FROM Counterparties ORDER BY counterparty_name";
             using (SqlConnection connection = new SqlConnection(connectionString))
-            using (SqlCommand command = new SqlCommand("SELECT id, name FROM Counterparties ORDER BY name", connection))
+            using (SqlCommand command = new SqlCommand(sql, connection))
             {
                 connection.Open();
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        object id = reader["id"];
-                        ComboItem item = new ComboItem(id, reader["name"].ToString());
+                        ComboItem item = new ComboItem(reader["counterparty_id"], reader["counterparty_name"].ToString());
                         cmbCustomer.Items.Add(item);
                         if (CustomerId != null && item.Id.ToString() == CustomerId.ToString())
                             cmbCustomer.SelectedItem = item;
