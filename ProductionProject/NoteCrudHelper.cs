@@ -8,7 +8,6 @@ namespace ProductionProject
 {
     public static class NoteCrudHelper
     {
-        private const string NotesPageUrl = "http://localhost:8080/notes";
         private const string NotesJsonUrl = "http://localhost:8080/api/notes";
         private const string NotesQuery = @"
 SELECT n.note_id AS [ID], n.note_title AS [Заголовок],
@@ -33,23 +32,21 @@ ORDER BY n.created_at DESC, n.note_id DESC";
                 add.Click += (s, e) => AddNote(connectionString, currentUserId, grid, source);
                 edit.Click += (s, e) => EditNote(connectionString, grid, source);
                 delete.Click += (s, e) => DeleteNote(connectionString, grid, source);
-                toolbar.Controls.Add(add); toolbar.Controls.Add(edit); toolbar.Controls.Add(delete);
+                toolbar.Controls.Add(add);
+                toolbar.Controls.Add(edit);
+                toolbar.Controls.Add(delete);
             }
 
-            Button refresh = UiHelper.CreateButton("Обновить", 100);
-            Button openPage = UiHelper.CreateButton("Веб-представление", 160);
             Button openJson = UiHelper.CreateButton("API JSON", 120);
-            refresh.Click += (s, e) => LoadGrid(connectionString, grid, source);
-            openPage.Click += (s, e) => OpenUrl(NotesPageUrl);
             openJson.Click += (s, e) => OpenUrl(NotesJsonUrl);
-            toolbar.Controls.Add(refresh); toolbar.Controls.Add(openPage); toolbar.Controls.Add(openJson);
+            toolbar.Controls.Add(openJson);
             UiHelper.AddStartsWithSearch(toolbar, source, "Заголовок", "Поиск по заголовку:");
 
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
             content.Controls.Add(UiHelper.CreateTablePanel(grid, source));
             content.Controls.Add(toolbar);
             page.Controls.Add(content);
-            page.Controls.Add(UiHelper.CreateTopPanel("Заметки производственной системы", "Работа с заметками и встроенным API"));
+            page.Controls.Add(UiHelper.CreateTopPanel("Заметки производственной системы", "Работа с заметками и JSON API"));
             LoadGrid(connectionString, grid, source);
             return page;
         }
@@ -57,7 +54,10 @@ ORDER BY n.created_at DESC, n.note_id DESC";
         private static void OpenUrl(string url)
         {
             try { Process.Start(url); }
-            catch (Exception ex) { MessageBox.Show("Не удалось открыть ссылку: " + ex.Message); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Не удалось открыть JSON API: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static void LoadGrid(string cs, DataGridView grid, BindingSource source)
@@ -73,12 +73,19 @@ ORDER BY n.created_at DESC, n.note_id DESC";
                     if (grid.Columns.Contains("ID")) grid.Columns["ID"].Visible = false;
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Ошибка загрузки заметок: " + ex.Message); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка загрузки заметок: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static int SelectedId(DataGridView grid)
         {
-            if (grid.CurrentRow == null) { MessageBox.Show("Выберите строку."); return 0; }
+            if (grid.CurrentRow == null)
+            {
+                MessageBox.Show("Выберите строку.", "Данные не выбраны", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return 0;
+            }
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
@@ -93,7 +100,8 @@ ORDER BY n.created_at DESC, n.note_id DESC";
                     command.Parameters.AddWithValue("@user", userId);
                     command.Parameters.AddWithValue("@title", form.NoteTitle);
                     command.Parameters.AddWithValue("@content", form.NoteContent);
-                    connection.Open(); command.ExecuteNonQuery();
+                    connection.Open();
+                    command.ExecuteNonQuery();
                 }
                 LoadGrid(cs, grid, source);
             }
@@ -113,7 +121,8 @@ ORDER BY n.created_at DESC, n.note_id DESC";
                     command.Parameters.AddWithValue("@title", form.NoteTitle);
                     command.Parameters.AddWithValue("@content", form.NoteContent);
                     command.Parameters.AddWithValue("@id", id);
-                    connection.Open(); command.ExecuteNonQuery();
+                    connection.Open();
+                    command.ExecuteNonQuery();
                 }
                 LoadGrid(cs, grid, source);
             }
@@ -122,12 +131,13 @@ ORDER BY n.created_at DESC, n.note_id DESC";
         private static void DeleteNote(string cs, DataGridView grid, BindingSource source)
         {
             int id = SelectedId(grid); if (id == 0) return;
-            if (MessageBox.Show("Удалить выбранную заметку?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (MessageBox.Show("Удалить выбранную заметку?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             using (SqlConnection connection = new SqlConnection(cs))
             using (SqlCommand command = new SqlCommand("DELETE FROM Notes WHERE note_id=@id", connection))
             {
                 command.Parameters.AddWithValue("@id", id);
-                connection.Open(); command.ExecuteNonQuery();
+                connection.Open();
+                command.ExecuteNonQuery();
             }
             LoadGrid(cs, grid, source);
         }
