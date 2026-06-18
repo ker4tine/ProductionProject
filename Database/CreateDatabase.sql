@@ -1,0 +1,5 @@
+CREATE DATABASE PracticeDB;
+GO
+
+USE PracticeDB;
+GO
