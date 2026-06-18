@@ -30,6 +30,8 @@
     <Compile Include="NotesApiServer.cs" /><Compile Include="OrderCrudHelper.cs" />
     <Compile Include="OrderEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="OrderItemEditForm.cs"><SubType>Form</SubType></Compile>
+    <Compile Include="ProductionOrderCrudHelper.cs" />
+    <Compile Include="ProductionOrderEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="SpecificationCrudHelper.cs" />
     <Compile Include="SpecificationEditForm.cs"><SubType>Form</SubType></Compile>
     <Compile Include="UiHelper.cs" />
