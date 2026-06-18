@@ -42,9 +42,6 @@ LEFT JOIN Operations o ON s.operation_id = o.operation_id";
                 toolbar.Controls.Add(delete);
             }
 
-            Button refresh = UiHelper.CreateButton("Обновить", 100);
-            refresh.Click += (s, e) => LoadGrid(connectionString, grid, source);
-            toolbar.Controls.Add(refresh);
             UiHelper.AddStartsWithSearch(toolbar, source, "Продукция", "Поиск по продукции:");
 
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
@@ -71,7 +68,7 @@ LEFT JOIN Operations o ON s.operation_id = o.operation_id";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка загрузки спецификаций: " + ex.Message);
+                MessageBox.Show("Ошибка загрузки спецификаций: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -83,7 +80,11 @@ LEFT JOIN Operations o ON s.operation_id = o.operation_id";
 
         private static int SelectedId(DataGridView grid)
         {
-            if (grid.CurrentRow == null) { MessageBox.Show("Выберите строку."); return 0; }
+            if (grid.CurrentRow == null)
+            {
+                MessageBox.Show("Выберите строку.", "Данные не выбраны", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return 0;
+            }
             return Convert.ToInt32(grid.CurrentRow.Cells["ID"].Value);
         }
 
@@ -115,7 +116,7 @@ LEFT JOIN Operations o ON s.operation_id = o.operation_id";
         private static void DeleteSpec(string cs, DataGridView grid, BindingSource source)
         {
             int id = SelectedId(grid); if (id == 0) return;
-            if (MessageBox.Show("Удалить выбранную спецификацию?", "Подтверждение", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (MessageBox.Show("Удалить выбранную спецификацию?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             using (SqlConnection connection = new SqlConnection(cs))
             using (SqlCommand command = new SqlCommand("DELETE FROM Specifications WHERE specification_id=@id", connection))
             {
