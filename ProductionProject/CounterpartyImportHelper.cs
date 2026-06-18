@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web.Script.Serialization;
@@ -10,48 +9,13 @@ namespace ProductionProject
 {
     public static class CounterpartyImportHelper
     {
-        private const string SelectSql = @"
-SELECT counterparty_id AS [ID], counterparty_name AS [Наименование],
-       inn AS [ИНН], address AS [Адрес], phone AS [Телефон],
-       counterparty_type AS [Тип]
-FROM Counterparties
-ORDER BY counterparty_name";
-
-        public static TabPage CreateCounterpartiesTab(string connectionString, bool canEdit)
-        {
-            TabPage page = new TabPage("Контрагенты") { BackColor = UiHelper.LightBackground };
-            BindingSource source = new BindingSource();
-            DataGridView grid = UiHelper.CreateGrid();
-            FlowLayoutPanel toolbar = UiHelper.CreateToolbar();
-
-            if (canEdit)
-            {
-                Button importButton = UiHelper.CreateButton("Импорт JSON", 130);
-                importButton.Click += (s, e) => ImportFromFile(connectionString, grid, source);
-                toolbar.Controls.Add(importButton);
-            }
-
-            Button refreshButton = UiHelper.CreateButton("Обновить", 100);
-            refreshButton.Click += (s, e) => LoadGrid(connectionString, grid, source);
-            toolbar.Controls.Add(refreshButton);
-            UiHelper.AddStartsWithSearch(toolbar, source, "Наименование", "Поиск по наименованию:");
-
-            Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
-            content.Controls.Add(UiHelper.CreateTablePanel(grid, source));
-            content.Controls.Add(toolbar);
-            page.Controls.Add(content);
-            page.Controls.Add(UiHelper.CreateTopPanel("Контрагенты", "Импорт заказчиков и поставщиков из JSON"));
-            LoadGrid(connectionString, grid, source);
-            return page;
-        }
-
-        private static void ImportFromFile(string connectionString, DataGridView grid, BindingSource source)
+        public static bool ImportFromFile(string connectionString)
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
                 dialog.Title = "Выберите файл Заказчики.json";
                 dialog.Filter = "JSON-файлы (*.json)|*.json|Все файлы (*.*)|*.*";
-                if (dialog.ShowDialog() != DialogResult.OK) return;
+                if (dialog.ShowDialog() != DialogResult.OK) return false;
 
                 try
                 {
@@ -63,11 +27,16 @@ ORDER BY counterparty_name";
                         "Импорт контрагентов",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
-                    LoadGrid(connectionString, grid, source);
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка импорта: " + ex.Message, "Импорт контрагентов", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(
+                        "Не удалось импортировать контрагентов. Проверьте структуру выбранного JSON-файла.\n\n" + ex.Message,
+                        "Ошибка импорта",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return false;
                 }
             }
         }
@@ -121,9 +90,9 @@ ORDER BY counterparty_name";
                             {
                                 command.Parameters.AddWithValue("@id", id);
                                 command.Parameters.AddWithValue("@name", name);
-                                command.Parameters.AddWithValue("@inn", (object)inn ?? DBNull.Value);
-                                command.Parameters.AddWithValue("@address", (object)address ?? DBNull.Value);
-                                command.Parameters.AddWithValue("@phone", (object)phone ?? DBNull.Value);
+                                command.Parameters.AddWithValue("@inn", string.IsNullOrWhiteSpace(inn) ? (object)DBNull.Value : inn);
+                                command.Parameters.AddWithValue("@address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
+                                command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
                                 command.Parameters.AddWithValue("@type", type);
                                 command.ExecuteNonQuery();
                             }
@@ -148,25 +117,6 @@ ORDER BY counterparty_name";
         {
             object value;
             return item.TryGetValue(key, out value) && value != null ? Convert.ToString(value).Trim() : "";
-        }
-
-        private static void LoadGrid(string connectionString, DataGridView grid, BindingSource source)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlDataAdapter adapter = new SqlDataAdapter(SelectSql, connection))
-                {
-                    DataTable table = new DataTable();
-                    adapter.Fill(table);
-                    UiHelper.BindTable(grid, source, table);
-                    if (grid.Columns.Contains("ID")) grid.Columns["ID"].Visible = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки контрагентов: " + ex.Message);
-            }
         }
 
         private sealed class ImportResult
