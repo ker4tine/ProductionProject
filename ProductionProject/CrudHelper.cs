@@ -28,9 +28,6 @@ namespace ProductionProject
                 toolbar.Controls.Add(delete);
             }
 
-            Button refresh = UiHelper.CreateButton("Обновить", 100);
-            refresh.Click += (s, e) => LoadGrid(connectionString, grid, source, query);
-            toolbar.Controls.Add(refresh);
             UiHelper.AddStartsWithSearch(toolbar, source, "Артикул", "Поиск по артикулу:");
 
             Panel content = new Panel { Dock = DockStyle.Fill, BackColor = UiHelper.LightBackground, Padding = new Padding(16) };
