@@ -14,7 +14,6 @@ namespace ProductionProject
         private Button btnLogin;
         private Label lblMessage;
 
-        private int failedAttempts = 0;
         private CurrentUserData currentUser;
         private NotesApiServer apiServer;
 
@@ -23,6 +22,7 @@ namespace ProductionProject
             public int Id;
             public string Login;
             public string Role;
+            public int FailedAttempts;
         }
 
         public Form1()
@@ -43,7 +43,11 @@ namespace ProductionProject
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Не удалось запустить API заметок: " + ex.Message);
+                MessageBox.Show(
+                    "Не удалось запустить JSON API заметок.\n\n" + ex.Message,
+                    "Ошибка запуска API",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
@@ -135,12 +139,12 @@ namespace ProductionProject
                     connection.Open();
                     int? userIdByLogin = GetUserIdByLogin(connection, login);
 
-                    string sql = @"
-                        SELECT u.user_id, u.user_login, r.role_name, u.is_blocked
-                        FROM Users u
-                        JOIN Roles r ON u.role_id = r.role_id
-                        WHERE u.user_login = @login
-                          AND u.password_hash = @password";
+                    const string sql = @"
+SELECT u.user_id, u.user_login, r.role_name, u.is_blocked, u.failed_attempts
+FROM Users u
+JOIN Roles r ON u.role_id = r.role_id
+WHERE u.user_login = @login
+  AND u.password_hash = @password";
 
                     using (SqlCommand command = new SqlCommand(sql, connection))
                     {
@@ -152,14 +156,12 @@ namespace ProductionProject
                             if (!reader.Read())
                             {
                                 reader.Close();
-                                failedAttempts++;
-
                                 if (userIdByLogin.HasValue)
-                                    IncreaseFailedAttempts(connection, userIdByLogin.Value);
+                                    IncreaseFailedAttempts(connection, userIdByLogin.Value, 1);
 
-                                lblMessage.Text = failedAttempts >= 3
+                                lblMessage.Text = userIdByLogin.HasValue && IsUserBlocked(connection, userIdByLogin.Value)
                                     ? "Вы заблокированы. Обратитесь к администратору"
-                                    : "Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные";
+                                    : "Вы ввели неверный логин или пароль. Проверьте введенные данные.";
                                 return;
                             }
 
@@ -173,19 +175,23 @@ namespace ProductionProject
                             {
                                 Id = Convert.ToInt32(reader["user_id"]),
                                 Login = reader["user_login"].ToString(),
-                                Role = reader["role_name"].ToString()
+                                Role = reader["role_name"].ToString(),
+                                FailedAttempts = Convert.ToInt32(reader["failed_attempts"])
                             };
                         }
                     }
 
-                    using (CaptchaForm captcha = new CaptchaForm())
+                    int remainingCaptchaAttempts = Math.Max(1, 3 - currentUser.FailedAttempts);
+                    using (CaptchaForm captcha = new CaptchaForm(remainingCaptchaAttempts))
                     {
-                        if (captcha.ShowDialog() != DialogResult.OK)
+                        DialogResult result = captcha.ShowDialog();
+                        if (result != DialogResult.OK)
                         {
-                            IncreaseFailedAttempts(connection, currentUser.Id);
+                            int attemptsToAdd = captcha.FailedAttempts > 0 ? captcha.FailedAttempts : 1;
+                            IncreaseFailedAttempts(connection, currentUser.Id, attemptsToAdd);
                             lblMessage.Text = IsUserBlocked(connection, currentUser.Id)
                                 ? "Вы заблокированы. Обратитесь к администратору"
-                                : "Капча пройдена неверно.";
+                                : "Капча не пройдена.";
                             currentUser = null;
                             return;
                         }
@@ -200,7 +206,7 @@ namespace ProductionProject
                 return;
             }
 
-            MessageBox.Show("Вы успешно авторизовались");
+            MessageBox.Show("Вы успешно авторизовались", "Авторизация", MessageBoxButtons.OK, MessageBoxIcon.Information);
             BuildMainForm();
         }
 
@@ -215,19 +221,20 @@ namespace ProductionProject
             }
         }
 
-        private void IncreaseFailedAttempts(SqlConnection connection, int userId)
+        private void IncreaseFailedAttempts(SqlConnection connection, int userId, int count)
         {
-            string sql = @"
-                UPDATE Users
-                SET failed_attempts = failed_attempts + 1,
-                    is_blocked = CASE
-                        WHEN failed_attempts + 1 >= 3 THEN 1
-                        ELSE is_blocked
-                    END
-                WHERE user_id = @userId";
+            const string sql = @"
+UPDATE Users
+SET failed_attempts = failed_attempts + @count,
+    is_blocked = CASE
+        WHEN failed_attempts + @count >= 3 THEN 1
+        ELSE is_blocked
+    END
+WHERE user_id = @userId";
 
             using (SqlCommand command = new SqlCommand(sql, connection))
             {
+                command.Parameters.AddWithValue("@count", count);
                 command.Parameters.AddWithValue("@userId", userId);
                 command.ExecuteNonQuery();
             }
@@ -275,24 +282,25 @@ namespace ProductionProject
                 TextAlign = ContentAlignment.MiddleLeft
             };
             Button btnExit = new Button { Text = "Выйти", Dock = DockStyle.Right, Width = 65 };
-            btnExit.Click += (s, e) => { failedAttempts = 0; currentUser = null; BuildLoginForm(); };
+            btnExit.Click += (s, e) => { currentUser = null; BuildLoginForm(); };
             topPanel.Controls.Add(userLabel);
             topPanel.Controls.Add(btnExit);
 
             TabControl tabs = new TabControl { Dock = DockStyle.Fill, Appearance = TabAppearance.Normal, SizeMode = TabSizeMode.Normal };
-            bool canEdit = currentUser.Role == "Администратор";
+            bool isAdministrator = currentUser.Role == "Администратор";
+            const bool canEditBusinessData = true;
 
             tabs.TabPages.Add(HomeTabHelper.CreateHomeTab(currentUser.Login, currentUser.Role));
-            tabs.TabPages.Add(OrderCrudHelper.CreateOrdersTab(connectionString, canEdit));
-            tabs.TabPages.Add(OrderCrudHelper.CreateOrderItemsTab(connectionString, canEdit));
-            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEdit));
-            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEdit));
-            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEdit));
-            tabs.TabPages.Add(SpecificationCrudHelper.CreateSpecificationsTab(connectionString, canEdit));
-            tabs.TabPages.Add(NoteCrudHelper.CreateNotesTab(connectionString, currentUser.Id, canEdit));
+            tabs.TabPages.Add(OrderCrudHelper.CreateOrdersTab(connectionString, canEditBusinessData));
+            tabs.TabPages.Add(OrderCrudHelper.CreateOrderItemsTab(connectionString, canEditBusinessData));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Продукция", "Products", true, false, canEditBusinessData));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Материалы", "Materials", true, true, canEditBusinessData));
+            tabs.TabPages.Add(CrudHelper.CreateDictionaryTab(connectionString, "Операции", "Operations", false, true, canEditBusinessData));
+            tabs.TabPages.Add(SpecificationCrudHelper.CreateSpecificationsTab(connectionString, canEditBusinessData));
+            tabs.TabPages.Add(NoteCrudHelper.CreateNotesTab(connectionString, currentUser.Id, canEditBusinessData));
             tabs.TabPages.Add(CostTabHelper.CreateCostTab(connectionString));
 
-            if (canEdit)
+            if (isAdministrator)
                 tabs.TabPages.Add(UserTabHelper.CreateUsersTab(connectionString));
 
             Controls.Add(tabs);
